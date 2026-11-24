@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BasketStats Voz</title>
+<meta name="theme-color" content="#e8590c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#16181d;--mute:#667085;--line:#e3e6eb;--acc:#e8590c;--acc2:#fff4ec;--ok:#2b8a3e;--okb:#ebfbee;--bad:#c92a2a;--badb:#fff5f5;--opp:#364fc7;--chip:#eef0f3}
+@media (prefers-color-scheme:dark){:root{--bg:#101114;--card:#1a1c21;--ink:#eceef2;--mute:#9aa1ad;--line:#2b2e35;--acc:#ff7a2f;--acc2:#2a1d14;--ok:#51cf66;--okb:#132417;--bad:#ff6b6b;--badb:#2a1515;--opp:#748ffc;--chip:#252830}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.ghost{background:transparent}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button:disabled{opacity:.45;cursor:default}
+input,select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.team{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team.r{text-align:right}
+.pts{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.mid{text-align:center}
+.clock{font:700 22px/1 ui-monospace,Menlo,Consolas,monospace;padding:6px 10px;min-height:0;border-radius:8px}
+.clock.run{background:var(--acc);color:#fff;border-color:var(--acc)}
+.per{font-size:12px;color:var(--mute);margin-top:3px}
+body.listening.hosted header{padding-top:56px;transition:padding-top .2s}
+.ver{font-size:10px;color:var(--mute);margin-top:2px;letter-spacing:.03em}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 12px 0;scrollbar-width:none}
+nav button{flex:0 0 auto;border-radius:999px;padding:6px 14px;min-height:36px;font-size:14px}
+nav button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+main{padding:10px 12px 90px;max-width:820px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+h2{font-size:15px;margin:0 0 8px}
+h3{font-size:13px;margin:12px 0 6px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.mute{color:var(--mute);font-size:13px}
+.mic{width:100%;font-size:18px;font-weight:700;min-height:64px;border-radius:14px}
+.mic.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.85}}
+.partial{min-height:22px;color:var(--mute);font-style:italic;margin:6px 2px}
+.banner{border-radius:10px;padding:10px 12px;margin-top:8px;font-weight:500}
+.banner.ok{background:var(--okb);color:var(--ok)}
+.banner.bad{background:var(--badb);color:var(--bad)}
+.banner.flash{animation:flash .5s}
+@keyframes flash{from{transform:scale(1.02)}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--chip);border:2px solid transparent;border-radius:12px;min-width:56px;padding:6px 8px;text-align:center;line-height:1.1}
+.chip b{display:block;font-size:18px}
+.chip small{font-size:11px;color:var(--mute);display:block;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.sel{border-color:var(--acc);background:var(--acc2)}
+.chip.opp b{color:var(--opp)}
+.chip.opp.sel{border-color:var(--opp)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.grid button{padding:8px 4px;font-weight:600;font-size:14px}
+.grid .mk{color:var(--ok)} .grid .ms{color:var(--bad)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+th{position:sticky;top:0;background:var(--chip);font-size:12px}
+td:nth-child(1),th:nth-child(1){text-align:left;position:sticky;left:0;background:var(--card)}
+th:nth-child(1){background:var(--chip)}
+td:nth-child(2),th:nth-child(2){text-align:left}
+tr.tot td{font-weight:700}
+.log{list-style:none;margin:0;padding:0}
+.log li{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.log li .t{font:12px ui-monospace,Menlo,monospace;color:var(--mute);min-width:44px}
+.log li .d{flex:1}
+.log li button{min-height:34px;padding:4px 10px;font-size:13px}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;background:var(--chip);color:var(--mute);margin-left:4px}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:12px}
+.modal .card{max-width:520px;width:100%;margin:0}
+.sw{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.sw input{width:auto;min-height:0}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--chip);font-size:12px}
+.stack>*+*{margin-top:8px}
+.help li{margin:3px 0}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;z-index:30;max-width:90%;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="score">
+    <div><div class="team" id="hHome">Mi equipo</div><div class="pts" id="hA">0</div></div>
+    <div class="mid"><button class="clock" id="hClock" data-act="clockToggle">10:00</button><div class="per" id="hPer">—</div><div class="ver" id="hVer">BasketStats Voz</div></div>
+    <div><div class="team r" id="hOpp">Rival</div><div class="pts" style="text-align:right" id="hB">0</div></div>
+  </div>
+  <nav id="tabs"></nav>
+</header>
+<main id="main"></main>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script>
+/* BasketStats Voz — motor de órdenes y estadísticas (port mejorado de BasketEngine) */
+const BS = (() => {
+  'use strict';
+
+  // ---------- utilidades ----------
+  const WORD_NUMBERS = (() => {
+    const m = new Map();
+    const base = ['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciseis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidos','veintitres','veinticuatro','veinticinco','veintiseis','veintisiete','veintiocho','veintinueve'];
+    base.forEach((w, i) => m.set(w, String(i)));
+    ['treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'].forEach((t, i) => {
+      const tens = (i + 3) * 10;
+      for (let u = 1; u <= 9; u++) m.set(`${t} y ${base[u]}`, String(tens + u));
+      m.set(t, String(tens));
+    });
+    m.set('veintiun', '21'); m.set('un', '1'); m.set('una', '1');
+    return m;
+  })();
+  const WORD_KEYS = [...WORD_NUMBERS.keys()].sort((a, b) => b.length - a.length);
+
+  // errores típicos del dictado → forma canónica
+  const FIXES = [
+    [/\b(tripe|trible|tripl|tiple)\b/g, 'triple'], [/\btriples\b/g, 'triple'],
+    [/\btiros libres\b/g, 'tiro libre'], [/\blibres\b/g, 'libre'],
+    [/\b(bandeja|entrada|suspension|gancho|palmeo)\b/g, 'canasta'],
+    [/\b(rebota|rebotes|rebot)\b/g, 'rebote'],
+    [/\b(tapones|taponazo)\b/g, 'tapon'],
+    [/\bpersonal\b/g, 'falta'],
+    [/\b(asistente|asistio|asistido|pase de)\b/g, 'asiste'],
+    [/\b(robada|robado|robo de balon|roba|robos)\b/g, 'robo'],
+    [/\b(perdio|perdidas)\b/g, 'perdida'],
+    [/\b(anoto|metio|enceta|encesta|encesto|dentro)\b/g, 'anotado'],
+    [/\b(fallan|falle|fallida|fallido)\b/g, 'fallado'],
+    [/\bdefensa\b/g, 'defensivo'], [/\bataque\b/g, 'ofensivo'],
+    [/\bel otro equipo\b/g, 'rival'], [/\bellos\b/g, 'rival'],
+    [/\bmates\b/g, 'mate'],
+  ];
+
+  const norm = (s) => (s || '').toLowerCase()
+    .normalize('NFD').replace(/\p{M}+/gu, '')
+    .replace(/[.,;!?¿¡"]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Palabras de órdenes: nunca se interpretan como nombre de jugador
+  const STOP = new Set(('triple canasta tiro libre rebote ofensivo defensivo asiste asistencia robo recupera recuperacion perdida pierde tapon bloqueo falta faltas recibida recibido mate anotado anotada fallado fallada errado rival contrario cambio cambios sale salen entra entran por del de la el los las para sigue reloj cuarto periodo prorroga iniciar inicia final finalizar quinteto mismo juegan titulares deshacer borra anula ultima era corrige numero dorsal jugador puntos minutos segundos quedan restan falta luego despues seguidamente favor contra pasar siguiente nuevo empezar comenzar comienza tiempo muerto crono para stop dos tres uno una').split(' '));
+
+  function nameTokens(roster) {
+    const byToken = new Map();
+    const full = [];
+    for (const p of roster || []) {
+      const n = norm(p.name);
+      if (!n) continue;
+      full.push([n, p.number]);
+      for (const t of n.split(' ')) {
+        if (t.length < 3 || STOP.has(t) || WORD_NUMBERS.has(t)) continue;
+        if (!byToken.has(t)) byToken.set(t, new Set());
+        byToken.get(t).add(p.number);
+      }
+    }
+    return { full: full.sort((a, b) => b[0].length - a[0].length), byToken };
+  }
+
+  function normalized(text, roster) {
+    let s = norm(text);
+    for (const [re, rep] of FIXES) s = s.replace(re, rep);
+    if (roster && roster.length) {
+      const { full, byToken } = nameTokens(roster);
+      for (const [n, num] of full) {
+        if (n.includes(' ')) s = s.replace(new RegExp(`(?<![\\p{L}\\p{N}])${esc(n)}(?![\\p{L}\\p{N}])`, 'gu'), ` jugador ${num} `);
+      }
+      for (const [t, nums] of byToken) {
+        if (nums.size !== 1) continue;
+        s = s.replace(new RegExp(`(?<![\\p{L}\\p{N}])(?:(?:a|al|el|de|del) )?${esc(t)}(?![\\p{L}\\p{N}])`, 'gu'), ` jugador ${[...nums][0]} `);
+      }
+    }
+    for (const k of WORD_KEYS) {
+      s = s.replace(new RegExp(`(?<![\\p{L}\\p{N}])${esc(k)}(?![\\p{L}\\p{N}])`, 'gu'), WORD_NUMBERS.get(k));
+    }
+    return s.replace(/\s+/g, ' ').trim();
+  }
+
+  const containsOne = (s, arr) => arr.some((w) => s.includes(w));
+  const extractNumbers = (s) => [...s.matchAll(/(?<![0-9:])([0-9]{1,2})(?![0-9:])/g)].map((m) => parseInt(m[1], 10));
+  const fmt = (sec) => { sec = Math.max(0, Math.round(sec)); return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`; };
+  const ok = (message, extra) => ({ ok: true, message, ...extra });
+  const err = (message) => ({ ok: false, message });
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const today = () => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+
+  function parseTime(s) {
+    let m = s.match(/(?:^|\s)([0-9]{1,2}):([0-9]{1,2})(?:\s|$)/);
+    if (!m) m = s.match(/([0-9]{1,2})\s*minutos?\s*(?:y\s*)?([0-9]{1,2})\s*(?:segundos?)?/);
+    if (!m) m = s.match(/(?:a falta de|en el|en|restan|quedan|tiempo|reloj|crono)\s*(?:los?\s*)?(?:a\s*)?([0-9]{1,2})\s+([0-9]{1,2})(?:\s|$)/);
+    if (!m) { const s1 = s.match(/(?:quedan|restan|a falta de)\s*([0-9]{1,2})\s*segundos?/); if (s1) return parseInt(s1[1], 10); }
+    if (!m) return -1;
+    const mi = parseInt(m[1], 10), se = parseInt(m[2], 10);
+    return se < 60 ? mi * 60 + se : -1;
+  }
+
+  function periodNumber(s) {
+    const m = s.match(/([1-9])\s*(?:er|o|a|º)?\s*(?:cuarto|periodo|prorroga)/);
+    if (m) return parseInt(m[1], 10);
+    if (s.includes('primer cuarto') || s.includes('primero cuarto')) return 1;
+    if (s.includes('segundo cuarto')) return 2;
+    if (s.includes('tercer cuarto')) return 3;
+    if (s.includes('cuarto cuarto')) return 4;
+    return -1;
+  }
+
+  const DESC = {
+    '2M': 'tiro de 2 anotado', '2X': 'tiro de 2 fallado', '3M': 'triple anotado', '3X': 'triple fallado',
+    '1M': 'tiro libre anotado', '1X': 'tiro libre fallado', OREB: 'rebote ofensivo', DREB: 'rebote defensivo',
+    REB: 'rebote (sin clasificar)', AST: 'asistencia', STL: 'robo', TOV: 'pérdida', BLK: 'tapón realizado',
+    BLKA: 'tapón recibido', PF: 'falta cometida', FR: 'falta recibida', DUNK: 'mate anotado',
+  };
+  const description = (t) => DESC[t] || t;
+  const POINTS = { '2M': 2, DUNK: 2, '3M': 3, '1M': 1 };
+
+  // ---------- modelo ----------
+  const newPeriod = (quarter, duration) => ({ quarter, duration, state: 'PREPARED', lineup: [], pending: [], clock: { remaining: duration, running: false, startedAt: 0, used: false } });
+  const newGame = (opponent, roster, homeTeam) => ({
+    id: uid(), title: `${homeTeam} vs ${opponent}`, opponent, homeTeam, competition: '', date: today(),
+    sequenceCounter: 0, roster: roster.map((p) => ({ number: p.number, name: p.name })),
+    periods: [newPeriod(1, 600)], entries: [], changes: [],
+  });
+  const newState = () => ({ version: 2, teamName: 'Mi equipo', roster: [], game: null, history: [], settings: { sounds: true, vibrate: true }, updatedAt: 0 });
+
+  const current = (g) => g.periods[g.periods.length - 1];
+  const lookup = (roster, n) => roster.find((p) => p.number === n) || null;
+  const playerName = (g, n) => { const p = lookup(g.roster, n); return p ? p.name : `Dorsal ${n}`; };
+  const names = (g, nums) => nums.map((n) => `${playerName(g, n)} (#${n})`).join(', ');
+
+  // ---------- reloj ----------
+  function clockRemaining(p, now = Date.now()) {
+    const c = p.clock || (p.clock = { remaining: p.duration, running: false, startedAt: 0, used: false });
+    if (!c.running) return c.remaining;
+    return Math.max(0, c.remaining - (now - c.startedAt) / 1000);
+  }
+  function clockStart(g, now = Date.now()) {
+    const p = current(g);
+    if (p.state !== 'ACTIVE') return err('Inicia el cuarto antes de poner en marcha el reloj.');
+    const c = p.clock;
+    if (c.running) return ok('El reloj ya está en marcha.');
+    if (c.remaining <= 0) return err('El reloj está a 00:00.');
+    c.running = true; c.startedAt = now; c.used = true;
+    return ok(`Reloj en marcha (${fmt(c.remaining)}).`, { kind: 'clock' });
+  }
+  function clockStop(g, now = Date.now()) {
+    const p = current(g); const c = p.clock;
+    if (!c.running) return ok(`Reloj parado en ${fmt(c.remaining)}.`, { kind: 'clock' });
+    c.remaining = Math.round(clockRemaining(p, now)); c.running = false;
+    return ok(`Reloj parado en ${fmt(c.remaining)}.`, { kind: 'clock' });
+  }
+  function clockSet(g, sec, now = Date.now()) {
+    const p = current(g);
+    if (sec < 0 || sec > p.duration) return err(`Tiempo fuera del periodo: ${fmt(sec)}.`);
+    const c = p.clock; c.remaining = sec; c.used = true; if (c.running) c.startedAt = now;
+    return ok(`Reloj ajustado a ${fmt(sec)}.`, { kind: 'clock' });
+  }
+
+  // ---------- cambios / quintetos ----------
+  const changesOf = (g, q) => g.changes.filter((c) => c.quarter === q).sort((a, b) => (b.remaining - a.remaining) || (a.sequence - b.sequence));
+
+  function lineupAt(g, p, remaining) {
+    let l = [...p.lineup];
+    for (const c of changesOf(g, p.quarter)) {
+      if (c.remaining < remaining) break;
+      l = l.filter((n) => !c.outs.includes(n)); l.push(...c.ins);
+    }
+    return l;
+  }
+
+  function validTimeline(g, q) {
+    const p = g.periods.find((x) => x.quarter === q);
+    if (!p || p.state === 'PREPARED') return true;
+    let l = [...p.lineup];
+    for (const c of changesOf(g, q)) {
+      if (c.remaining > p.duration || c.remaining < 0) return false;
+      if (!c.outs.every((n) => l.includes(n))) return false;
+      if (c.ins.some((n) => l.includes(n))) return false;
+      l = l.filter((n) => !c.outs.includes(n)); l.push(...c.ins);
+    }
+    return true;
+  }
+
+  function prepare(g, nums) {
+    const p = current(g);
+    if (p.state !== 'PREPARED') return err('El cuarto ya está iniciado.');
+    if (!nums || nums.length !== 5 || new Set(nums).size !== 5) return err('Debes indicar cinco dorsales diferentes.');
+    for (const n of nums) if (!lookup(g.roster, n)) return err(`El dorsal ${n} no está en la plantilla del partido.`);
+    p.pending = [...nums];
+    return ok(`Quinteto preparado para el ${p.quarter}.º periodo: ${names(g, nums)}. Di 'iniciar cuarto'.`, { kind: 'period' });
+  }
+
+  function startPeriod(g) {
+    const p = current(g);
+    if (p.state !== 'PREPARED') return err('El cuarto ya ha empezado o terminado.');
+    if (p.pending.length !== 5) return err('Indica primero el quinteto que va a salir.');
+    p.lineup = [...p.pending]; p.state = 'ACTIVE';
+    p.clock = { remaining: p.duration, running: false, startedAt: 0, used: false };
+    return ok(`Iniciado el ${p.quarter}.º periodo con ${names(g, p.lineup)}.`, { kind: 'period' });
+  }
+
+  function closePeriod(g, now = Date.now()) {
+    const p = current(g);
+    if (p.state !== 'ACTIVE') return err('No hay un cuarto activo.');
+    if (p.clock && p.clock.running) clockStop(g, now);
+    p.state = 'CLOSED';
+    const name = p.quarter > 4 ? 'Prórroga ' + (p.quarter - 4) : 'Cuarto ' + p.quarter;
+    if (p.quarter >= 4) {
+      const a = score(g, 'OWN', 0), b = score(g, 'OPP', 0);
+      if (a === b) return ok(`${name} cerrado. Empate a ${a}: toca prórroga. Di 'siguiente periodo' o 'mismo quinteto'.`, { kind: 'period', closed: true, tie: true });
+      return ok(`${name} cerrado. Resultado ${a}-${b}. Di 'final del partido' para terminarlo.`, { kind: 'period', closed: true, tie: false });
+    }
+    return ok(`${name} cerrado. Minutos jugados calculados.`, { kind: 'period', closed: true });
+  }
+
+  const isTied = (g) => score(g, 'OWN', 0) === score(g, 'OPP', 0);
+  function finishGame(g, now = Date.now()) {
+    if (g.finished) return err('El partido ya está finalizado.');
+    let p = current(g);
+    if (p.quarter < 4) return err('El partido solo se puede finalizar a partir del cuarto cuarto.');
+    if (p.state === 'PREPARED') return err('Hay un periodo preparado sin jugar. Deshazlo o juégalo antes de finalizar.');
+    if (p.state === 'ACTIVE') { const r = closePeriod(g, now); if (!r.ok) return r; }
+    if (isTied(g)) return err(`Hay empate a ${score(g, 'OWN', 0)}: el partido no puede terminar así. Juega la prórroga.`);
+    g.finished = true;
+    return ok(`Partido finalizado: ${g.homeTeam} ${score(g, 'OWN', 0)} - ${score(g, 'OPP', 0)} ${g.opponent}.`, { kind: 'period', finished: true });
+  }
+  function reopenGame(g) {
+    if (!g.finished) return err('El partido no está finalizado.');
+    g.finished = false;
+    return ok('Partido reabierto.', { kind: 'period' });
+  }
+  function cancelPrepared(g) {
+    const p = current(g);
+    if (g.periods.length < 2 || p.state !== 'PREPARED') return err('No hay un periodo preparado que anular.');
+    if (g.entries.some((e) => e.quarter === p.quarter) || g.changes.some((c) => c.quarter === p.quarter)) return err('Ese periodo ya tiene registros.');
+    g.periods.pop();
+    return ok(`${p.quarter > 4 ? 'Prórroga ' + (p.quarter - 4) : 'Cuarto ' + p.quarter} anulado.`, { kind: 'period' });
+  }
+
+  function nextPeriod(g) {
+    const p = current(g);
+    if (g.finished) return err('El partido está finalizado.');
+    if (p.state !== 'CLOSED') return err('Finaliza el cuarto anterior antes de pasar al siguiente.');
+    if (p.quarter >= 4 && !isTied(g)) return err(`No hay empate (${score(g, 'OWN', 0)}-${score(g, 'OPP', 0)}): no se juega prórroga. Di 'final del partido'.`);
+    const q = p.quarter + 1;
+    g.periods.push(newPeriod(q, q > 4 ? 300 : 600));
+    return ok(`Periodo ${q} preparado. Indica su quinteto inicial.`, { kind: 'period' });
+  }
+
+  function sameLineup(g) {
+    if (g.periods.length < 2) return err('No hay un quinteto del cuarto anterior.');
+    const prev = g.periods[g.periods.length - 2];
+    return prepare(g, lineupAt(g, prev, 0));
+  }
+
+  function substitute(g, remaining, outs, ins) {
+    const p = current(g);
+    if (p.state !== 'ACTIVE') return err('Inicia el cuarto antes de indicar cambios.');
+    if (remaining < 0 || remaining > p.duration) return err(`Tiempo fuera del cuarto: ${fmt(remaining)}.`);
+    if (!outs || !ins || outs.length !== ins.length || outs.length < 1 || outs.length > 5) return err('Indica el mismo número de jugadores que salen y entran (entre 1 y 5).');
+    if (new Set(outs).size !== outs.length || new Set(ins).size !== ins.length) return err('Hay dorsales repetidos en la sustitución.');
+    const ch = changesOf(g, p.quarter);
+    if (ch.length && remaining > ch[ch.length - 1].remaining) return err('El tiempo debe ser igual o inferior al del cambio anterior. Corrige el cambio anterior si es necesario.');
+    const l = lineupAt(g, p, remaining);
+    for (const n of outs) if (!l.includes(n)) return err(`No está en pista para salir: ${playerName(g, n)} (#${n}).`);
+    for (const n of ins) {
+      if (!lookup(g.roster, n)) return err(`Dorsal no registrado: ${n}.`);
+      if (l.includes(n)) return err(`Ya está en pista: ${playerName(g, n)} (#${n}).`);
+    }
+    const c = { quarter: p.quarter, remaining, outs: [...outs], ins: [...ins], sequence: ++g.sequenceCounter };
+    g.changes.push(c);
+    return ok(`Cambio a ${fmt(remaining)}. Salen: ${names(g, outs)}. Entran: ${names(g, ins)}.`, { kind: 'change' });
+  }
+
+  // ---------- jugadas ----------
+  function eventType(g, s, team) {
+    if (s.includes('rebote')) {
+      if (s.includes('ofensiv')) return 'OREB';
+      if (s.includes('defensiv')) return 'DREB';
+      for (let i = g.entries.length - 1; i >= 0; i--) {
+        const e = g.entries[i];
+        if (['2X', '3X', '1X'].includes(e.type)) return e.team === team ? 'OREB' : 'DREB';
+        if (['2M', '3M', '1M', 'DUNK'].includes(e.type) || e.type.endsWith('REB')) break;
+      }
+      return 'REB';
+    }
+    if (containsOne(s, ['asistencia', 'asiste'])) return 'AST';
+    if (containsOne(s, ['robo', 'recuperacion', 'recupera'])) return 'STL';
+    if (containsOne(s, ['perdida', 'pierde'])) return 'TOV';
+    if (containsOne(s, ['tapon', 'bloqueo'])) return containsOne(s, ['recibido', 'recibida', 'en contra', 'contra']) ? 'BLKA' : 'BLK';
+    if (containsOne(s, ['falta', 'faltas']) && !s.includes('tiro libre') && !s.includes('libre')) return containsOne(s, ['recibida', 'recibido', 'a favor']) ? 'FR' : 'PF';
+    if (containsOne(s, ['mate', 'matado'])) return containsOne(s, ['fallado', 'fallada', 'falla', 'fallo', 'errado']) ? '2X' : 'DUNK';
+    const free = s.includes('libre');
+    const three = s.includes('triple') || /\b(?:tiro de|canasta de|anota|mete|anotado de|tiro|lanzamiento de) 3\b/.test(s) || s.includes('3 puntos') || s.includes('de 3');
+    const two = s.includes('canasta') || /\b(?:tiro de|canasta de|anota|mete|anotado de|tiro|lanzamiento de) 2\b/.test(s) || s.includes('2 puntos') || s.includes('de 2');
+    const missed = containsOne(s, ['fallado', 'fallada', 'falla', 'fallo', 'errado', 'errada', 'fuera']);
+    const made = containsOne(s, ['anotado', 'anotada', 'anota', 'encestado', 'encestada', 'mete', 'convertido', 'convertida']) || s.includes('canasta') || (s.includes('triple') && !missed);
+    const pick = (m, x) => (missed ? x : made ? m : null);
+    if (free) return pick('1M', '1X');
+    if (three) return pick('3M', '3X');
+    if (two) return pick('2M', '2X');
+    return null;
+  }
+
+  function playerFrom(g, s) {
+    const m = s.match(/(?:numero|dorsal|del|de la|por|jugador|el)\s*(?:el\s*)?([0-9]{1,2})\b/);
+    if (m) return parseInt(m[1], 10);
+    const nums = extractNumbers(s.replace(/\b(?:tiro de|canasta de|lanzamiento de|de) [123]\b/g, ' ').replace(/\b[123] puntos\b/g, ' '));
+    if (nums.length === 1) return nums[0];
+    if (nums.length > 1) return nums[nums.length - 1];
+    return -1;
+  }
+
+  function addEntry(g, p, type, player, team, group, now) {
+    const e = { quarter: p.quarter, type, team, player: team === 'OWN' ? player : -1, sequence: ++g.sequenceCounter, clock: p.clock && p.clock.used ? Math.round(clockRemaining(p, now)) : -1 };
+    if (group) e.group = group;
+    g.entries.push(e);
+    return e;
+  }
+
+  function recordAction(g, p, s, now) {
+    const team = containsOne(s, ['rival', 'contrario', 'contrarios', 'visitante', 'visitantes', 'oponente']) ? 'OPP' : 'OWN';
+    // asistencia ligada: "triple del 11 asiste el 7"
+    const ai = s.search(/\basist|\basiste\b/);
+    if (team === 'OWN' && ai > 0) {
+      const shotPart = s.slice(0, ai), astPart = s.slice(ai);
+      const t = eventType(g, shotPart, 'OWN');
+      if (t && POINTS[t]) {
+        const shooter = playerFrom(g, shotPart);
+        const assister = playerFrom(g, astPart);
+        const lineup = lineupAt(g, p, 0);
+        for (const n of [shooter, assister]) {
+          if (!lookup(g.roster, n)) return err('Indica el dorsal registrado del jugador (por ejemplo, número 11).');
+          if (!lineup.includes(n)) return err(`${playerName(g, n)} (#${n}) no figura en pista. Comprueba los cambios.`);
+        }
+        if (shooter === assister) return err('El jugador que anota no puede darse la asistencia a sí mismo.');
+        const grp = uid();
+        addEntry(g, p, t, shooter, 'OWN', grp, now);
+        addEntry(g, p, 'AST', assister, 'OWN', grp, now);
+        return ok(`${playerName(g, shooter)} (#${shooter}): ${description(t)}, asistencia de ${playerName(g, assister)} (#${assister}).`, { kind: 'entry', points: POINTS[t] });
+      }
+    }
+    const t = eventType(g, s, team);
+    if (!t) return err("No reconozco la acción. Prueba 'triple anotado del 11'.");
+    if (t === 'REB') return err('Rebote sin clasificar: indica ofensivo o defensivo.');
+    let n = -1;
+    if (team === 'OWN') {
+      n = playerFrom(g, s);
+      if (!lookup(g.roster, n)) return err('Indica el dorsal registrado del jugador (por ejemplo, número 11).');
+      if (!lineupAt(g, p, 0).includes(n)) return err(`${playerName(g, n)} (#${n}) no figura en pista. Comprueba los cambios.`);
+    }
+    addEntry(g, p, t, n, team, null, now);
+    const who = team === 'OPP' ? 'Rival' : `${playerName(g, n)} (#${n})`;
+    return ok(`${who}: ${description(t)} (cuarto ${p.quarter}).`, { kind: 'entry', points: POINTS[t] || 0 });
+  }
+
+  // asistencia añadida después de una canasta (botones rápidos)
+  function linkAssist(g, shot, n) {
+    const p = g.periods.find((x) => x.quarter === shot.quarter);
+    if (!g.entries.includes(shot) || !POINTS[shot.type] || shot.team !== 'OWN') return err('Registro no encontrado.');
+    if (!lookup(g.roster, n)) return err(`Dorsal no registrado: ${n}.`);
+    if (n === shot.player) return err('El jugador que anota no puede darse la asistencia a sí mismo.');
+    if (!lineupAt(g, p, 0).includes(n)) return err(`${playerName(g, n)} (#${n}) no figura en pista. Comprueba los cambios.`);
+    if (shot.group && g.entries.some((e) => e.group === shot.group && e.type === 'AST')) return err('Esa canasta ya tiene asistencia.');
+    shot.group = shot.group || uid();
+    g.entries.push({ quarter: shot.quarter, type: 'AST', team: 'OWN', player: n, sequence: ++g.sequenceCounter, clock: shot.clock, group: shot.group });
+    return ok(`Asistencia de ${playerName(g, n)} (#${n}).`, { kind: 'entry' });
+  }
+
+  function correctLast(g, s) {
+    const p = current(g);
+    const n = parseInt(s.match(/([0-9]{1,2})(?!.*[0-9])/)[1], 10);
+    const own = g.entries.filter((e) => e.quarter === p.quarter && e.team === 'OWN');
+    if (!own.length) return err('No hay ninguna jugada de tu equipo que corregir en este periodo.');
+    const last = own.reduce((a, b) => (b.sequence > a.sequence ? b : a));
+    let target = last;
+    if (last.group) {
+      const grp = own.filter((e) => e.group === last.group);
+      target = s.includes('asist') ? (grp.find((e) => e.type === 'AST') || last) : (grp.find((e) => e.type !== 'AST') || last);
+    }
+    if (!lookup(g.roster, n)) return err(`Dorsal no registrado: ${n}.`);
+    if (!lineupAt(g, p, 0).includes(n)) return err(`${playerName(g, n)} (#${n}) no figura en pista. Comprueba los cambios.`);
+    const old = target.player;
+    target.player = n;
+    return ok(`Corregido: ${description(target.type)} pasa de #${old} a ${playerName(g, n)} (#${n}).`, { kind: 'entry' });
+  }
+
+  function undo(g) {
+    const p = current(g);
+    const es = g.entries.filter((e) => e.quarter === p.quarter);
+    const cs = g.changes.filter((c) => c.quarter === p.quarter);
+    const le = es.reduce((a, b) => (!a || b.sequence > a.sequence ? b : a), null);
+    const lc = cs.reduce((a, b) => (!a || b.sequence > a.sequence ? b : a), null);
+    if (!le && !lc) return err('No hay acciones del periodo actual para deshacer.');
+    if (lc && (!le || lc.sequence > le.sequence)) {
+      g.changes.splice(g.changes.indexOf(lc), 1);
+      return ok('Último bloque de sustituciones deshecho.', { kind: 'undo' });
+    }
+    if (le.group) g.entries = g.entries.filter((e) => e.group !== le.group);
+    else g.entries.splice(g.entries.indexOf(le), 1);
+    return ok('Última acción estadística deshecha.', { kind: 'undo' });
+  }
+
+  function deleteEntry(g, e) {
+    if (!g.entries.includes(e)) return err('Registro no encontrado.');
+    // borrar una canasta borra también su asistencia ligada; borrar la asistencia deja la canasta
+    if (e.group && e.type !== 'AST') g.entries = g.entries.filter((x) => x.group !== e.group);
+    else g.entries.splice(g.entries.indexOf(e), 1);
+    return ok('Acción eliminada. Estadísticas recalculadas.');
+  }
+
+  function deleteChange(g, c) {
+    const i = g.changes.indexOf(c);
+    if (i < 0) return err('Cambio no encontrado.');
+    g.changes.splice(i, 1);
+    if (!validTimeline(g, c.quarter)) { g.changes.splice(i, 0, c); return err('Ese cambio no se puede eliminar porque otro cambio posterior depende de él. Corrige los cambios en orden inverso.'); }
+    return ok('Cambio eliminado. Minutos y +/- recalculados.');
+  }
+
+  function correctChangeTime(g, c, sec) {
+    const p = g.periods.find((x) => x.quarter === c.quarter);
+    if (!p || sec < 0 || sec > p.duration) return err('Hora fuera del periodo.');
+    const old = c.remaining; c.remaining = sec;
+    if (!validTimeline(g, c.quarter)) { c.remaining = old; return err('La nueva hora altera el orden de los cambios. Revisa las sustituciones posteriores.'); }
+    return ok(`Cambio corregido a ${fmt(sec)}. Minutos recalculados.`);
+  }
+
+  // ---------- intérprete ----------
+  function interpret(state, text, now = Date.now()) {
+    const g = state.game;
+    if (!g) return err('Crea un partido antes de dictar acciones.');
+    const s = normalized(text, g.roster);
+    if (current(g).state === 'ACTIVE' && !s.includes('cuarto') && !s.includes('periodo') && /\b(luego|despues|seguidamente)\b/.test(s)) {
+      const parts = s.split(/\b(?:y\s+)?(?:luego|despues|seguidamente)\b/).filter((x) => x.trim());
+      if (parts.length > 1) {
+        const snap = JSON.stringify(g);
+        const msgs = []; let pts = 0;
+        for (const part of parts) {
+          const r = single(g, part.trim(), now);
+          if (!r.ok) { Object.assign(g, JSON.parse(snap)); return err(`No se ha guardado ninguna acción de este bloque: ${r.message}`); }
+          msgs.push(r.message); pts += r.points || 0;
+        }
+        return ok(msgs.join(' | '), { kind: 'entry', points: pts });
+      }
+    }
+    return single(g, s, now);
+  }
+
+  function single(g, s, now) {
+    let p = current(g);
+    if (!s) return err('No se ha reconocido ninguna orden.');
+    if (/\b(reabre|reabrir|reabrir el)\b/.test(s) && s.includes('partido')) return reopenGame(g);
+    if (g.finished) return err('El partido está finalizado. Reábrelo si necesitas corregir algo.');
+    if (/\b(final|finaliza|finalizar|fin|termina|terminar|acaba|acabar)\b/.test(s) && s.includes('partido') && !s.includes('cuarto') && !s.includes('periodo')) return finishGame(g, now);
+    if (/\b(deshacer|deshaz)\b/.test(s) || s.includes('borra ultima') || s.includes('anula ultima')) return undo(g);
+    if (/^(?:no\s+)?(?:(?:la asistencia\s+)?era\s+(?:de\s+|del\s+)?(?:el\s+)?|corrige\s+(?:a\s+|al\s+|el\s+)?|correccion\s+)(?:jugador\s+|numero\s+|dorsal\s+)?[0-9]{1,2}\b/.test(s) || /^no\s+(?:el\s+)?(?:jugador\s+)?[0-9]{1,2}$/.test(s)) return correctLast(g, s);
+    // reloj
+    if (/\b(reloj|crono|cronometro)\b/.test(s) || s.includes('tiempo muerto')) {
+      const t = parseTime(s.includes(':') ? s : s.replace(/\b(reloj|crono|cronometro)\b(?:\s+a)?/, 'tiempo'));
+      if (t >= 0 && !/\b(para|pausa|stop|deten|detener|sigue|arranca|reanuda|continua)\b/.test(s)) return clockSet(g, t, now);
+      if (/\b(sigue|arranca|reanuda|continua|marcha|inicia|iniciar|empieza|corre)\b/.test(s)) return clockStart(g, now);
+      return clockStop(g, now);
+    }
+    if (s.includes('mismo quinteto')) {
+      if (p.state === 'CLOSED') { const r = nextPeriod(g); if (!r.ok) return r; }
+      return sameLineup(g);
+    }
+    if (p.state === 'CLOSED' && (s.includes('cuarto') || s.includes('periodo') || s.includes('prorroga')) && containsOne(s, ['salen', 'juegan', 'quinteto', 'titulares']) && periodNumber(s) === p.quarter + 1) {
+      const r = nextPeriod(g); if (!r.ok) return r; p = current(g);
+    }
+    if (s.includes('quinteto') || s.includes('cuarto') || s.includes('periodo') || (p.state === 'PREPARED' && /^(salen|juegan|titulares) /.test(s))) {
+      if (containsOne(s, ['salen', 'juegan', 'titulares', 'quinteto']) && !s.includes('cambio') && !s.includes('final') && !s.includes('entran')) {
+        const q = periodNumber(s);
+        if (q !== -1 && q !== p.quarter) return err(`Estás en el cuarto ${p.quarter}. No se puede preparar el ${q}.`);
+        return prepare(g, extractNumbers(s.replace(/[1-9]\s*(er|o|a)?\s*(cuarto|periodo|prorroga)/g, ' ')));
+      }
+    }
+    if (/\b(final|finaliza|finalizar|fin|termina|terminar|acaba)\b/.test(s) && (s.includes('cuarto') || s.includes('periodo') || s.includes('prorroga'))) return closePeriod(g, now);
+    if (containsOne(s, ['siguiente', 'nuevo', 'pasar']) && (s.includes('cuarto') || s.includes('periodo') || s.includes('prorroga'))) return nextPeriod(g);
+    if (containsOne(s, ['inicia', 'inicio', 'iniciar', 'comienza', 'comenzar', 'empezar', 'empieza']) && (s.includes('cuarto') || s.includes('periodo') || s.includes('prorroga'))) {
+      const q = periodNumber(s);
+      if (q !== -1 && q !== p.quarter) return err(`El periodo actual es ${p.quarter}. Avanza primero desde el anterior.`);
+      return startPeriod(g);
+    }
+    if (containsOne(s, ['cambio', 'cambios', 'sale', 'salen', 'entra', 'entran', 'sustitucion'])) {
+      let t = parseTime(s);
+      if (t < 0) {
+        if (p.state === 'ACTIVE' && p.clock && p.clock.used) t = Math.round(clockRemaining(p, now));
+        else return err('En el cambio debes indicar el tiempo restante (por ejemplo, 6:42), o usa el reloj de la app.');
+      }
+      const v = s.replace(/(?<![0-9])[0-9]{1,2}:[0-9]{1,2}(?![0-9])/g, ' ').replace(/[0-9]{1,2}\s*minutos?\s*(?:y\s*)?[0-9]{1,2}\s*(?:segundos?)?/g, ' ').replace(/(?:a falta de|en el|en|restan|quedan|tiempo)\s*(?:los?\s*)?[0-9]{1,2}\s+[0-9]{1,2}(?=\s|$)/g, ' ');
+      const mo = v.match(/\b(salen|sale)\b/), mi = v.match(/\b(entran|entra)\b/);
+      if (mo && mi) {
+        const oS = mo.index, oE = oS + mo[0].length, iS = mi.index, iE = iS + mi[0].length;
+        let outs, ins;
+        if (oS < iS) { outs = extractNumbers(v.slice(oE, iS)); ins = extractNumbers(v.slice(iE)); }
+        else { ins = extractNumbers(v.slice(iE, oS)); outs = extractNumbers(v.slice(oE)); }
+        return substitute(g, t, outs, ins);
+      }
+      const m = s.match(/entra\s+(?:el\s+)?(?:jugador\s+)?([0-9]{1,2})\s+por\s+(?:el\s+)?(?:jugador\s+)?([0-9]{1,2})/);
+      if (m) return substitute(g, t, [parseInt(m[2], 10)], [parseInt(m[1], 10)]);
+      return err("Di 'salen 7 y 11, entran 6 y 12' indicando un único tiempo.");
+    }
+    if (p.state !== 'ACTIVE') return err('Inicia el cuarto para registrar jugadas.');
+    return recordAction(g, p, s, now);
+  }
+
+  // ---------- estadísticas ----------
+  function Totals() { return { m1: 0, x1: 0, m2: 0, x2: 0, m3: 0, x3: 0, oreb: 0, dreb: 0, reb: 0, ast: 0, stl: 0, tov: 0, blk: 0, blka: 0, pf: 0, fr: 0, dunks: 0 }; }
+  const KEY = { '1M': 'm1', '1X': 'x1', '2M': 'm2', '2X': 'x2', '3M': 'm3', '3X': 'x3', OREB: 'oreb', DREB: 'dreb', REB: 'reb', AST: 'ast', STL: 'stl', TOV: 'tov', BLK: 'blk', BLKA: 'blka', PF: 'pf', FR: 'fr' };
+  function addType(t, type) { if (type === 'DUNK') { t.dunks++; t.m2++; } else if (KEY[type]) t[KEY[type]]++; }
+  const points = (t) => t.m2 * 2 + t.m3 * 3 + t.m1;
+  const rebounds = (t) => t.oreb + t.dreb + t.reb;
+  const valuation = (t) => points(t) + rebounds(t) + t.ast + t.stl + t.blk + t.fr - t.x2 - t.x3 - t.x1 - t.tov - t.blka - t.pf;
+  function sumTotals(a, b) { const r = Totals(); for (const k in r) r[k] = a[k] + b[k]; return r; }
+
+  function tally(g, team, player, q) {
+    const t = Totals();
+    for (const e of g.entries) if (e.team === team && (player == null || e.player === player) && (!q || e.quarter === q)) addType(t, e.type);
+    return t;
+  }
+  const score = (g, team, q) => points(tally(g, team, null, q));
+
+  function secondsPlayed(g, q, now = Date.now()) {
+    const out = {}; for (const p of g.roster) out[p.number] = 0;
+    for (const p of g.periods) {
+      if ((q && p.quarter !== q) || p.state === 'PREPARED') continue;
+      let l = [...p.lineup]; let last = p.duration;
+      for (const c of changesOf(g, p.quarter)) {
+        for (const n of l) out[n] = (out[n] || 0) + (last - c.remaining);
+        l = l.filter((n) => !c.outs.includes(n)); l.push(...c.ins); last = c.remaining;
+      }
+      if (p.state === 'CLOSED') for (const n of l) out[n] = (out[n] || 0) + last;
+      else if (p.clock && p.clock.used) { const r = clockRemaining(p, now); if (r < last) for (const n of l) out[n] = (out[n] || 0) + (last - r); }
+    }
+    return out;
+  }
+  const minutesLive = (g) => g.periods.some((p) => p.state === 'CLOSED' || (p.state === 'ACTIVE' && p.clock && p.clock.used));
+
+  function plusMinus(g, q) {
+    const out = {}; for (const p of g.roster) out[p.number] = 0;
+    for (const p of g.periods) {
+      if ((q && p.quarter !== q) || p.state === 'PREPARED') continue;
+      let l = [...p.lineup];
+      const items = [...g.entries.filter((e) => e.quarter === p.quarter).map((e) => ({ seq: e.sequence, e })), ...g.changes.filter((c) => c.quarter === p.quarter).map((c) => ({ seq: c.sequence, c }))].sort((a, b) => a.seq - b.seq);
+      for (const it of items) {
+        if (it.c) { l = l.filter((n) => !it.c.outs.includes(n)); l.push(...it.c.ins); continue; }
+        let v = POINTS[it.e.type] || 0; if (it.e.team === 'OPP') v = -v;
+        if (v) for (const n of l) out[n] = (out[n] || 0) + v;
+      }
+    }
+    return out;
+  }
+
+  const pct = (m, a) => (a ? `${Math.round((m * 100) / a)}%` : '—');
+  const shots = (m, x) => `${m}/${m + x}`;
+  const COLS = ['Dorsal', 'Jugador', 'MIN', 'PT', 'T2', 'T2%', 'T3', 'T3%', 'TC', 'TC%', 'TL', 'TL%', 'RO', 'RD', 'RT', 'AS', 'BR', 'BP', 'TF', 'TR', 'MT', 'FC', 'FR', 'VA', '+/-'];
+  function row(num, name, secs, t, pm) {
+    const fgM = t.m2 + t.m3, fgX = t.x2 + t.x3;
+    return [num, name, secs >= 0 ? fmt(secs) : '—', points(t), shots(t.m2, t.x2), pct(t.m2, t.m2 + t.x2), shots(t.m3, t.x3), pct(t.m3, t.m3 + t.x3), shots(fgM, fgX), pct(fgM, fgM + fgX), shots(t.m1, t.x1), pct(t.m1, t.m1 + t.x1), t.oreb, t.dreb, rebounds(t), t.ast, t.stl, t.tov, t.blk, t.blka, t.dunks, t.pf, t.fr, valuation(t), pm == null ? '' : (pm > 0 ? '+' : '') + pm];
+  }
+  function rows(g, q, now) {
+    const secs = secondsPlayed(g, q, now); const pm = plusMinus(g, q); const live = minutesLive(g);
+    const out = g.roster.map((p) => row(`#${p.number}`, p.name, live ? secs[p.number] || 0 : -1, tally(g, 'OWN', p.number, q), pm[p.number]));
+    out.push(row('', g.homeTeam || 'Equipo', -1, tally(g, 'OWN', null, q), null));
+    out.push(row('', g.opponent || 'Rival', -1, tally(g, 'OPP', null, q), null));
+    return out;
+  }
+
+  // ---------- temporada ----------
+  function season(state, now = Date.now()) {
+    const games = [...(state.game ? [state.game] : []), ...state.history];
+    const acc = new Map();
+    const names = new Map(state.roster.map((p) => [p.number, p.name]));
+    for (const g of [...games].reverse()) for (const p of g.roster) if (!names.has(p.number)) names.set(p.number, p.name);
+    for (const g of games) {
+      const secs = secondsPlayed(g, 0, now); const pm = plusMinus(g, 0);
+      for (const p of g.roster) {
+        const t = tally(g, 'OWN', p.number, 0);
+        const played = (secs[p.number] || 0) > 0 || g.entries.some((e) => e.team === 'OWN' && e.player === p.number);
+        if (!played) continue;
+        const a = acc.get(p.number) || { number: p.number, gp: 0, secs: 0, pm: 0, t: Totals() };
+        a.gp++; a.secs += secs[p.number] || 0; a.pm += pm[p.number] || 0; a.t = sumTotals(a.t, t);
+        acc.set(p.number, a);
+      }
+    }
+    return [...acc.values()].sort((a, b) => a.number - b.number).map((a) => ({ ...a, name: names.get(a.number) || `Dorsal ${a.number}`, pts: points(a.t), reb: rebounds(a.t), val: valuation(a.t) }));
+  }
+
+  // ---------- plantilla / partidos ----------
+  function addPlayer(state, num, name) {
+    if (!Number.isInteger(num) || num < 0 || num > 99) return err('El dorsal debe estar entre 0 y 99.');
+    if (!name || !name.trim()) return err('Indica el nombre del jugador.');
+    if (lookup(state.roster, num)) return err('Ese dorsal ya existe en la plantilla.');
+    const p = { number: num, name: name.trim() };
+    state.roster.push(p); state.roster.sort((a, b) => a.number - b.number);
+    if (state.game && !lookup(state.game.roster, num)) { state.game.roster.push({ ...p }); state.game.roster.sort((a, b) => a.number - b.number); }
+    return ok(`Jugador añadido: ${p.name} (#${num}).`);
+  }
+  const gameUsesNumber = (g, n) => g.entries.some((e) => e.team === 'OWN' && e.player === n) || g.periods.some((p) => p.lineup.includes(n) || p.pending.includes(n)) || g.changes.some((c) => c.ins.includes(n) || c.outs.includes(n));
+  function editPlayer(state, oldNum, num, name) {
+    const p = lookup(state.roster, oldNum);
+    if (!p) return err('No se encuentra el jugador.');
+    if (!name || !name.trim()) return err('Indica el nombre del jugador.');
+    if (num !== oldNum) {
+      if (!Number.isInteger(num) || num < 0 || num > 99) return err('El dorsal debe estar entre 0 y 99.');
+      if (lookup(state.roster, num)) return err('Ese dorsal ya está asignado.');
+      if (state.game && gameUsesNumber(state.game, oldNum)) return err('No cambies dorsales que figuran en un partido: se perdería el vínculo con sus jugadas. Edita el nombre o crea un partido nuevo.');
+    }
+    const gp = state.game && lookup(state.game.roster, oldNum);
+    p.number = num; p.name = name.trim();
+    if (gp) { gp.number = num; gp.name = p.name; }
+    state.roster.sort((a, b) => a.number - b.number);
+    return ok('Ficha actualizada.');
+  }
+  function removePlayer(state, num) {
+    const p = lookup(state.roster, num);
+    if (!p) return err('No existe el dorsal.');
+    if (state.game && gameUsesNumber(state.game, num)) return err('Este jugador tiene datos en el partido actual. No puede eliminarse ahora.');
+    state.roster.splice(state.roster.indexOf(p), 1);
+    if (state.game) { const gp = lookup(state.game.roster, num); if (gp) state.game.roster.splice(state.game.roster.indexOf(gp), 1); }
+    return ok('Jugador retirado de la plantilla.');
+  }
+  function startNew(state, opponent, competition) {
+    if (state.roster.length < 5) return err('Primero registra al menos cinco jugadores en la plantilla.');
+    if (state.game) state.history.unshift(state.game);
+    const home = (state.teamName || '').trim() || 'Mi equipo';
+    state.game = newGame((opponent || '').trim() || 'Rival', state.roster, home);
+    state.game.competition = (competition || '').trim();
+    return ok('Partido creado. Dicta el quinteto del primer cuarto antes de iniciarlo.');
+  }
+
+  // ---------- importación (compatible con la copia de la app Android) ----------
+  function fixGame(g) {
+    if (!g) return null;
+    g.id = g.id || uid();
+    g.opponent = g.opponent || 'Rival'; g.homeTeam = g.homeTeam || 'Mi equipo';
+    g.title = g.title || `${g.homeTeam} vs ${g.opponent}`; g.date = g.date || today(); g.competition = g.competition || '';
+    g.roster = (g.roster || []).map((p) => ({ number: +p.number, name: String(p.name || '') }));
+    g.periods = (g.periods || []).map((p, i) => ({ quarter: p.quarter || i + 1, duration: p.duration || 600, state: p.state || 'PREPARED', lineup: (p.lineup || []).map(Number), pending: (p.pending || []).map(Number), clock: p.clock || { remaining: p.duration || 600, running: false, startedAt: 0, used: false } }));
+    if (!g.periods.length) g.periods = [newPeriod(1, 600)];
+    let seq = 0;
+    g.entries = (g.entries || []).map((e) => ({ quarter: e.quarter, type: e.type, team: e.team || 'OWN', player: e.player == null ? -1 : +e.player, clock: e.clock == null ? -1 : e.clock, sequence: e.sequence == null ? ++seq : e.sequence, ...(e.group ? { group: e.group } : {}) }));
+    g.changes = (g.changes || []).map((c) => ({ quarter: c.quarter, remaining: c.remaining, outs: (c.outs || []).map(Number), ins: (c.ins || []).map(Number), sequence: c.sequence == null ? ++seq : c.sequence }));
+    const maxSeq = Math.max(0, ...g.entries.map((e) => e.sequence), ...g.changes.map((c) => c.sequence));
+    g.sequenceCounter = Math.max(g.sequenceCounter || 0, maxSeq);
+    return g;
+  }
+  function importState(obj) {
+    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.roster) || !('game' in obj) || !Array.isArray(obj.history)) throw new Error('el archivo no tiene plantilla, partido e historial');
+    const s = newState();
+    s.teamName = obj.teamName || 'Mi equipo';
+    s.roster = obj.roster.map((p) => ({ number: +p.number, name: String(p.name || '') })).sort((a, b) => a.number - b.number);
+    s.game = fixGame(obj.game);
+    s.history = obj.history.map(fixGame).filter(Boolean);
+    s.settings = { ...s.settings, ...(obj.settings || {}) };
+    return s;
+  }
+
+  return {
+    normalized, interpret, parseTime, fmt, uid, today, description, newState, newGame, current, lookup, playerName, names,
+    clockRemaining, clockStart, clockStop, clockSet, changesOf, lineupAt, prepare, startPeriod, closePeriod, nextPeriod, sameLineup,
+    substitute, undo, linkAssist, deleteEntry, deleteChange, correctChangeTime, tally, score, secondsPlayed, plusMinus, minutesLive, rows, COLS,
+    points, rebounds, valuation, season, addPlayer, editPlayer, removePlayer, startNew, importState, fixGame, finishGame, reopenGame, cancelPrepared, isTied, POINTS, pct, shots,
+  };
+})();
+if (typeof module !== 'undefined') module.exports = BS;
+
+</script>
+<script>
+'use strict';
+const APP_VERSION = '1.2';
+const STANDALONE = true;
+const LS_KEY = 'basketstats-voz-v2';
+const LIBS = {
+  jspdf: STANDALONE ? 'jspdf.umd.min.js' : 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
+  autotable: STANDALONE ? 'jspdf.plugin.autotable.min.js' : 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js',
+  xlsx: STANDALONE ? 'xlsx.full.min.js' : 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+};
+let S = BS.newState();
+const UI = { tab: 'partido', sel: null, lineupSel: [], subOut: [], subIn: [], subOpen: false, subTime: '', assistFor: null, viewId: null, statQ: 0, last: null, partial: '', listening: false, wantListen: false, micNote: '', clockEdit: false, pendingFail: null, editPlayer: null };
+const CAP = { dict: null, tts: null, dl: null, db: null, uid: null, ready: false };
+const $ = (s) => document.querySelector(s);
+const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- persistencia ----------
+function loadLocal() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) S = BS.importState(JSON.parse(raw)), S.updatedAt = JSON.parse(raw).updatedAt || 0; } catch (e) { /* sin almacenamiento local */ }
+}
+let cloudTimer = null, cloudBusy = false, cloudDirty = false; const cloudSent = new Map();
+function persist() {
+  S.updatedAt = Date.now();
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) { /* lleno o bloqueado */ }
+  cloudDirty = true; clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 1500);
+}
+const gameDocId = (g) => 'g-' + g.id;
+async function cloudSave() {
+  if (!CAP.db || !CAP.uid) return;
+  if (cloudBusy) { cloudTimer = setTimeout(cloudSave, 800); return; }
+  cloudBusy = true; cloudDirty = false;
+  try {
+    const col = CAP.db.collection('data/users/' + CAP.uid);
+    const games = [...(S.game ? [S.game] : []), ...S.history];
+    const main = { version: 2, teamName: S.teamName, roster: S.roster, settings: S.settings, currentId: S.game ? S.game.id : null, historyIds: S.history.map((g) => g.id), updatedAt: S.updatedAt };
+    const want = new Map([['main', JSON.stringify(main)], ...games.map((g) => [gameDocId(g), JSON.stringify(g)])]);
+    for (const [id, body] of want) {
+      if (cloudSent.get(id) === body) continue;
+      await col.doc(id).set(id === 'main' ? main : { json: body });
+      cloudSent.set(id, body);
+    }
+    for (const id of [...cloudSent.keys()]) if (!want.has(id)) { await col.doc(id).delete(); cloudSent.delete(id); }
+    setSync('Guardado en tu cuenta');
+  } catch (e) {
+    setSync(e && e.code === 'quota_exceeded' ? 'Espacio en la nube lleno: guarda una copia .json y borra partidos antiguos' : 'Sin conexión con la nube: guardado solo en este navegador');
+    cloudDirty = true;
+  } finally { cloudBusy = false; }
+}
+let syncMsg = '';
+function setSync(m) { syncMsg = m; const el = $('#sync'); if (el) el.textContent = m; }
+async function cloudLoad() {
+  const col = CAP.db.collection('data/users/' + CAP.uid);
+  const main = await col.doc('main').get();
+  if (!main.exists) { persist(); return; }
+  const m = main.data();
+  if ((m.updatedAt || 0) <= (S.updatedAt || 0)) { cloudSent.set('main', JSON.stringify(m)); persist(); return; }
+  const ids = [...(m.currentId ? [m.currentId] : []), ...(m.historyIds || [])];
+  const snaps = await Promise.all(ids.map((id) => col.doc('g-' + id).get()));
+  const games = snaps.filter((s) => s.exists).map((s) => { cloudSent.set('g-' + s.id.slice(2), s.data().json); return JSON.parse(s.data().json); });
+  const obj = { teamName: m.teamName, roster: m.roster || [], settings: m.settings, game: m.currentId ? games.find((g) => g.id === m.currentId) || null : null, history: games.filter((g) => g.id !== m.currentId) };
+  S = BS.importState(obj); S.updatedAt = m.updatedAt;
+  cloudSent.set('main', JSON.stringify(m));
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+  render();
+}
+
+// ---------- capacidades ----------
+function wireDictation(dict) {
+    dict.onPartial(({ text }) => { UI.partial = text; const el = $('#partial'); if (el) el.textContent = text; });
+    dict.onFinal(({ text }) => { UI.partial = ''; const el = $('#partial'); if (el) el.textContent = ''; if (text && text.trim()) command(text.trim(), 'voz'); });
+    dict.onState(({ state, reason }) => {
+      UI.listening = state === 'listening';
+      if (!UI.listening && UI.wantListen) {
+        UI.wantListen = false;
+        if (reason !== 'stopped') { UI.micNote = ({ hidden: 'El micrófono se ha cortado al ocultar la pantalla. Toca para reanudar.', not_granted: 'No se ha dado permiso al micrófono. Actívalo en los permisos del navegador para esta página.', audio_capture: 'No se encuentra el micrófono (¿otra app lo está usando?).', network: 'El reconocimiento de voz necesita internet y no hay conexión. Toca para reintentar.' })[reason] || 'El micrófono se ha detenido. Toca para reanudar.'; beep(false); }
+      }
+      document.body.classList.toggle('listening', UI.listening);
+      releaseWake(); if (UI.listening) holdWake();
+      renderMic();
+    });
+}
+// ---------- adaptadores para la versión independiente (fuera de Claude) ----------
+function webDictation() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  let rec = null, want = false, held = false, on = false, fails = 0, timer = null, lastFinal = { t: '', at: 0 };
+  const cb = { p() {}, f() {}, s() {} };
+  const state = (st, reason) => { const now = st === 'listening'; if (now === on && now) return; on = now; cb.s({ state: st, reason }); };
+  const restart = (delay) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!want || held || document.hidden) return;
+      if (fails > 6) { want = false; state('idle', 'network'); return; }
+      try { rec.start(); } catch (e) { /* ya en marcha */ }
+    }, delay);
+  };
+  const make = () => {
+    const r = new SR();
+    // frase a frase y reinicio automático: más estable en Android que el modo continuo
+    r.lang = 'es-ES'; r.continuous = false; r.interimResults = true; r.maxAlternatives = 1;
+    r.onstart = () => state('listening');
+    r.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i], t = ((res[0] && res[0].transcript) || '').trim();
+        if (!t) continue;
+        if (res.isFinal) {
+          fails = 0;
+          const now = Date.now();
+          if (t === lastFinal.t && now - lastFinal.at < 1500) continue; // Android a veces repite el resultado
+          lastFinal = { t, at: now }; cb.f({ text: t });
+        } else interim += t + ' ';
+      }
+      cb.p({ text: interim.trim() });
+    };
+    r.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { want = false; state('idle', 'not_granted'); }
+      else if (e.error === 'audio-capture') { want = false; state('idle', 'audio_capture'); }
+      else if (e.error === 'network') fails++;
+    };
+    r.onend = () => {
+      cb.p({ text: '' });
+      if (want && !held) { if (!document.hidden) restart(fails ? 1200 : 120); }
+      else if (!want) state('idle', 'stopped');
+    };
+    return r;
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && want && !held) restart(200); });
+  return {
+    onPartial(f) { cb.p = f; }, onFinal(f) { cb.f = f; }, onState(f) { cb.s = f; },
+    start() { want = true; held = false; fails = 0; if (!rec) rec = make(); try { rec.start(); } catch (e) {} return Promise.resolve(); },
+    stop() { want = false; clearTimeout(timer); try { if (rec) rec.stop(); } catch (e) {} if (on) state('idle', 'stopped'); return Promise.resolve(); },
+    // pausa breve para que la confirmación hablada no se transcriba
+    hold(v) { held = v; if (v) { clearTimeout(timer); try { if (rec) rec.abort(); } catch (e) {} } else if (want) restart(150); },
+  };
+}
+function webTts() {
+  if (!('speechSynthesis' in window)) return null;
+  const voice = () => (speechSynthesis.getVoices() || []).find((v) => /^es(-ES)?/i.test(v.lang)) || null;
+  return {
+    speak(text) {
+      return new Promise((res, rej) => {
+        const u = new SpeechSynthesisUtterance(text); u.lang = 'es-ES'; const v = voice(); if (v) u.voice = v; u.rate = 1.1;
+        u.onend = () => res(); u.onerror = (e) => rej(e);
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+        setTimeout(res, 8000);
+      });
+    },
+    stop() { speechSynthesis.cancel(); }, onState() {},
+  };
+}
+const MIME = { pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv;charset=utf-8', json: 'application/json' };
+function choose(title, body, options) {
+  return new Promise((res) => {
+    $('#modal').innerHTML = `<div class="modal"><div class="card stack"><h2>${h(title)}</h2><div>${body}</div>${options.map(([k, l, cls]) => `<button class="${cls || ''}" style="width:100%" data-c="${k}">${h(l)}</button>`).join('')}<button class="ghost" style="width:100%" data-c="">Cancelar</button></div></div>`;
+    $('#modal').onclick = (e) => { const b = e.target.closest('[data-c]'); if (!b && !e.target.classList.contains('modal')) return; $('#modal').innerHTML = ''; res(b ? b.dataset.c : ''); };
+  });
+}
+async function webSave({ filename, data }) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const blob = new Blob([data], { type: MIME[ext] || 'application/octet-stream' });
+  let canShare = false, file = null;
+  try { file = new File([blob], filename, { type: blob.type }); canShare = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { canShare = false; }
+  if (canShare) {
+    const c = await choose(filename, 'Puedes enviarlo directamente (WhatsApp, correo…) o guardarlo en el móvil.', [['share', 'Compartir…', 'pri'], ['save', 'Guardar en el móvil']]);
+    if (!c) throw { code: 'declined' };
+    if (c === 'share') {
+      try { await navigator.share({ files: [file], title: filename }); return { status: 'saved' }; }
+      catch (e) { if (e && e.name === 'AbortError') throw { code: 'declined' }; }
+    }
+  }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return { status: 'saved' };
+}
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (UI.tab === 'ayuda') render(); });
+
+async function initCaps() {
+  if (STANDALONE) {
+    CAP.dict = webDictation(); CAP.tts = webTts(); CAP.dl = { save: webSave };
+    if (CAP.dict) wireDictation(CAP.dict);
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+    CAP.ready = true; setSync('Guardado en este dispositivo. Haz copias .json de vez en cuando.'); render(); return;
+  }
+  document.body.classList.add('hosted');
+  if (!window.claude || !window.claude.use) { CAP.ready = true; setSync('Guardado solo en este navegador'); render(); return; }
+  const [dict, tts, dl, db, user] = await Promise.all(['dictation', 'tts', 'downloads', 'db', 'user'].map((n) => window.claude.use(n).catch(() => null)));
+  Object.assign(CAP, { dict, tts, dl, db });
+  if (dict) wireDictation(dict);
+  if (db && user) {
+    try { CAP.uid = await user.id(); } catch (e) { CAP.uid = null; }
+    if (CAP.uid) { try { await cloudLoad(); setSync('Guardado en tu cuenta'); } catch (e) { setSync('Sin conexión con la nube: guardado solo en este navegador'); } }
+  } else setSync('Guardado solo en este navegador');
+  CAP.ready = true; render();
+}
+
+// ---------- sonido / vibración / pantalla ----------
+let actx = null;
+function audioInit() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} }
+function beep(good) {
+  if (S.settings.vibrate) try { navigator.vibrate && navigator.vibrate(good ? 40 : [60, 60, 60]); } catch (e) {}
+  if (!S.settings.sounds || !actx) return;
+  try {
+    const tones = good ? [[1046, 0, .08]] : [[300, 0, .12], [220, .16, .14]];
+    for (const [f, at, d] of tones) {
+      const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(.0001, actx.currentTime + at); g.gain.exponentialRampToValueAtTime(.25, actx.currentTime + at + .01); g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + at + d);
+      o.connect(g).connect(actx.destination); o.start(actx.currentTime + at); o.stop(actx.currentTime + at + d + .02);
+    }
+  } catch (e) {}
+}
+let wake = null;
+async function holdWake() { try { if (navigator.wakeLock && !wake) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; } }
+function releaseWake() { try { wake && wake.release(); } catch (e) {} wake = null; }
+function toast(m, ms = 2600) { const t = $('#toast'); t.innerHTML = `<div class="toast">${h(m)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => (t.innerHTML = ''), ms); }
+
+// ---------- órdenes ----------
+function apply(fn) {
+  const snap = S.game ? JSON.stringify(S.game) : null;
+  const r = fn();
+  if (!r.ok && snap) { const g = JSON.parse(snap); Object.keys(S.game).forEach((k) => delete S.game[k]); Object.assign(S.game, g); }
+  return r;
+}
+function command(text, source) {
+  audioInit();
+  let r = apply(() => BS.interpret(S, text));
+  let used = text;
+  const now = Date.now();
+  // el dictado a veces corta la frase: une con la anterior si ambas fallan
+  if (!r.ok && source === 'voz' && UI.pendingFail && now - UI.pendingFail.at < 6000) {
+    const joined = UI.pendingFail.text + ' ' + text;
+    const r2 = apply(() => BS.interpret(S, joined));
+    if (r2.ok) { r = r2; used = joined; }
+  }
+  UI.pendingFail = !r.ok && source === 'voz' ? { text, at: now } : null;
+  feedback(r, used);
+  if (r.ok && STANDALONE && S.settings.speak && source === 'voz' && CAP.tts && CAP.dict && CAP.dict.hold) {
+    const g2 = S.game;
+    let say = r.message.replace(/\s*\(#\d+\)/g, '').replace(/\s*\(cuarto \d+\)/g, '').replace(/#(\d+)/g, 'número $1').replace(/\s+\./g, '.');
+    if (r.points && g2) say += ` ${BS.score(g2, 'OWN', 0)} a ${BS.score(g2, 'OPP', 0)}.`;
+    CAP.dict.hold(true);
+    CAP.tts.speak(say.slice(0, 220)).catch(() => {}).finally(() => CAP.dict.hold(false));
+  }
+  if (r.ok) {
+    persist();
+    if (r.kind === 'period') { UI.lineupSel = []; UI.sel = null; }
+  }
+  render();
+  return r;
+}
+function feedback(r, text) {
+  UI.last = { ok: r.ok, msg: r.message, text, at: Date.now() };
+  beep(r.ok);
+}
+function quick(action) {
+  if (!S.game) return;
+  const g = S.game;
+  if (UI.sel == null) { feedback({ ok: false, message: 'Elige primero un jugador o «Rival».' }); renderPartido(); return; }
+  const who = UI.sel === 'OPP' ? 'rival ' : '';
+  const tail = UI.sel === 'OPP' ? '' : ` jugador ${UI.sel}`;
+  const before = g.entries.length;
+  const r = command(`${who}${action}${tail}`, 'boton');
+  if (r.ok && UI.sel !== 'OPP') {
+    const e = g.entries[g.entries.length - 1];
+    if (g.entries.length === before + 1 && BS.POINTS[e.type] && e.team === 'OWN') { UI.assistFor = e; render(); }
+  }
+}
+
+// ---------- render ----------
+const TABS = [['partido', 'Partido'], ['stats', 'Estadística'], ['jugadas', 'Jugadas'], ['plantilla', 'Plantilla'], ['mas', 'Partidos'], ['ayuda', 'Ayuda']];
+function viewGame() { return UI.viewId ? S.history.find((g) => g.id === UI.viewId) || S.game : S.game; }
+function perLabel(q) { return q > 4 ? `Prórroga ${q - 4}` : `${q}.º cuarto`; }
+const STATE_ES = { PREPARED: 'preparando', ACTIVE: 'en juego', CLOSED: 'finalizado' };
+
+function render() {
+  $('#tabs').innerHTML = TABS.map(([k, l]) => `<button class="${UI.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</button>`).join('');
+  renderHeader();
+  ({ partido: renderPartido, stats: renderStats, jugadas: renderJugadas, plantilla: renderPlantilla, mas: renderMas, ayuda: renderAyuda })[UI.tab]();
+}
+function renderHeader() {
+  const g = S.game;
+  $('#hVer').textContent = `BasketStats Voz v${APP_VERSION}`;
+  $('#hHome').textContent = g ? g.homeTeam : S.teamName || 'Mi equipo';
+  $('#hOpp').textContent = g ? g.opponent : 'Rival';
+  $('#hA').textContent = g ? BS.score(g, 'OWN', 0) : 0;
+  $('#hB').textContent = g ? BS.score(g, 'OPP', 0) : 0;
+  tickClock();
+}
+function tickClock() {
+  const g = S.game, el = $('#hClock'), per = $('#hPer');
+  if (!g) { el.textContent = '--:--'; el.classList.remove('run'); per.textContent = 'Sin partido'; return; }
+  const p = BS.current(g);
+  const rem = BS.clockRemaining(p);
+  if (p.clock.running && rem <= 0) { BS.clockStop(g); p.clock.remaining = 0; persist(); beep(false); toast('Fin del tiempo del periodo. Di «final del cuarto» cuando acabe.'); }
+  el.textContent = g.finished ? 'FINAL' : BS.fmt(Math.ceil(rem));
+  el.classList.toggle('run', !!p.clock.running);
+  per.textContent = g.finished ? 'Final del partido' : `${perLabel(p.quarter)} · ${STATE_ES[p.state]}${p.clock.used ? '' : ' · reloj sin usar'}`;
+}
+setInterval(() => { tickClock(); if (UI.tab === 'stats' && S.game && BS.current(S.game).clock.running && !UI.viewId && Date.now() % 5000 < 260) renderStats(); }, 250);
+
+function chip(n, name, sel, extra = '') { return `<button class="chip ${sel ? 'sel' : ''}" ${extra}><b>${n === 'OPP' ? 'RIV' : n}</b><small>${h(name)}</small></button>`; }
+
+function micBlock() {
+  if (!CAP.ready) return `<button class="mic" disabled>Cargando…</button>`;
+  if (!CAP.dict) return STANDALONE ? `<div class="mute">Este navegador no permite el dictado. Usa <b>Chrome</b> en Android u ordenador (en iPhone, prueba con <b>Safari</b>). Mientras tanto puedes escribir las órdenes o usar los botones.</div>` : `<div class="mute">El dictado por voz funciona al abrir esta página en <b>Chrome</b> (móvil u ordenador), no dentro de la app de Claude. Mientras tanto puedes escribir las órdenes o usar los botones.</div>`;
+  return `<button class="mic ${UI.listening ? 'on' : ''}" data-act="mic" id="micBtn">${UI.listening ? '■  Detener micrófono' : '🎤  Escuchar'}</button>
+  ${UI.micNote && !UI.listening ? `<div class="banner bad">${h(UI.micNote)}</div>` : ''}
+  <div class="partial" id="partial">${h(UI.partial)}</div>`;
+}
+function renderMic() { const el = $('#micWrap'); if (el) el.innerHTML = micBlock(); }
+function lastBanner() {
+  if (!UI.last) return '';
+  return `<div class="banner ${UI.last.ok ? 'ok' : 'bad'} ${Date.now() - UI.last.at < 600 ? 'flash' : ''}">${h(UI.last.msg)}${UI.last.text && !UI.last.ok ? `<div class="mute">Oído: «${h(UI.last.text)}»</div>` : ''}</div>`;
+}
+
+function renderPartido() {
+  const g = S.game;
+  if (!g) {
+    $('#main').innerHTML = `<div class="card stack"><h2>Nuevo partido</h2>
+      ${S.roster.length < 5 ? `<div class="banner bad">Primero añade al menos cinco jugadores en <a href="#" data-act="tab" data-v="plantilla">Plantilla</a>.</div>` : ''}
+      <input id="nOpp" placeholder="Nombre del equipo rival">
+      <input id="nComp" placeholder="Competición (opcional)">
+      <button class="pri" data-act="newGame" ${S.roster.length < 5 ? 'disabled' : ''}>Crear partido</button></div>`;
+    return;
+  }
+  const p = BS.current(g);
+  let panel = '';
+  if (p.state === 'PREPARED') {
+    const sel = UI.lineupSel.length ? UI.lineupSel : p.pending;
+    panel = `<div class="card"><h2>Quinteto del ${perLabel(p.quarter)}</h2>
+      <div class="mute" style="margin-bottom:8px">Toca cinco jugadores o di «quinteto 4, 7, 9, 11 y 15».</div>
+      <div class="chips">${g.roster.map((pl) => chip(pl.number, pl.name, sel.includes(pl.number), `data-act="lineupPick" data-v="${pl.number}"`)).join('')}</div>
+      <div class="row" style="margin-top:10px">
+        ${p.quarter > 1 ? `<button data-act="sameLineup">Mismo quinteto</button>` : ''}
+        <button data-act="prepare" ${UI.lineupSel.length === 5 ? '' : 'disabled'}>Fijar quinteto (${UI.lineupSel.length}/5)</button>
+      </div>
+      <button class="pri" style="width:100%;margin-top:8px" data-act="startPeriod" ${p.pending.length === 5 ? '' : 'disabled'}>Iniciar ${perLabel(p.quarter)}</button>
+      ${p.pending.length === 5 ? `<div class="mute" style="margin-top:6px">Preparados: ${h(BS.names(g, p.pending))}</div>` : ''}</div>`;
+  } else if (p.state === 'ACTIVE') {
+    const court = BS.lineupAt(g, p, 0);
+    const bench = g.roster.filter((x) => !court.includes(x.number));
+    const assist = UI.assistFor && g.entries.includes(UI.assistFor) ? UI.assistFor : null;
+    panel = `<div class="card"><h2>En pista</h2>
+      <div class="chips">${court.map((n) => chip(n, (BS.lookup(g.roster, n) || {}).name || '', UI.sel === n, `data-act="pick" data-v="${n}"`)).join('')}${chip('OPP', g.opponent, UI.sel === 'OPP', 'data-act="pick" data-v="OPP"').replace('class="chip', 'class="chip opp')}</div>
+      ${assist ? `<div class="banner ok" style="margin-top:8px">¿Asistencia para la canasta de #${assist.player}?
+        <div class="chips" style="margin-top:6px">${court.filter((n) => n !== assist.player).map((n) => chip(n, (BS.lookup(g.roster, n) || {}).name || '', false, `data-act="assist" data-v="${n}"`)).join('')}<button class="chip" data-act="noAssist"><b>✕</b><small>Sin asist.</small></button></div></div>` : ''}
+      <div class="grid">
+        <button class="mk" data-act="q" data-v="canasta de 2 anotada">T2 ✓</button><button class="ms" data-act="q" data-v="tiro de 2 fallado">T2 ✗</button>
+        <button class="mk" data-act="q" data-v="triple anotado">T3 ✓</button><button class="ms" data-act="q" data-v="triple fallado">T3 ✗</button>
+        <button class="mk" data-act="q" data-v="tiro libre anotado">TL ✓</button><button class="ms" data-act="q" data-v="tiro libre fallado">TL ✗</button>
+        <button data-act="q" data-v="rebote ofensivo">Reb. of.</button><button data-act="q" data-v="rebote defensivo">Reb. def.</button>
+        <button data-act="q" data-v="asistencia">Asist.</button><button data-act="q" data-v="robo">Robo</button>
+        <button data-act="q" data-v="perdida">Pérdida</button><button data-act="q" data-v="tapon realizado">Tapón</button>
+        <button data-act="q" data-v="tapon recibido">Tapón rec.</button><button data-act="q" data-v="falta cometida">Falta</button>
+        <button data-act="q" data-v="falta recibida">Falta rec.</button><button class="mk" data-act="q" data-v="mate anotado">Mate</button>
+      </div></div>
+      <div class="card"><div class="row"><h2 style="margin:0">Cambios</h2><button data-act="subToggle" style="flex:0 0 auto">${UI.subOpen ? 'Cerrar' : 'Hacer cambio'}</button></div>
+      ${UI.subOpen ? `<h3>Salen</h3><div class="chips">${court.map((n) => chip(n, (BS.lookup(g.roster, n) || {}).name || '', UI.subOut.includes(n), `data-act="subOut" data-v="${n}"`)).join('')}</div>
+        <h3>Entran</h3><div class="chips">${bench.map((x) => chip(x.number, x.name, UI.subIn.includes(x.number), `data-act="subIn" data-v="${x.number}"`)).join('')}</div>
+        <h3>Tiempo restante</h3><div class="row"><input id="subTime" inputmode="numeric" placeholder="MM:SS" value="${h(UI.subTime || (p.clock.used ? BS.fmt(Math.round(BS.clockRemaining(p))) : ''))}"><button class="pri" data-act="subDo" ${UI.subOut.length && UI.subOut.length === UI.subIn.length ? '' : 'disabled'}>Registrar (${UI.subOut.length}×${UI.subIn.length})</button></div>`
+      : `<div class="mute">O di «cambio en 6:42 salen 7 y 11 entran 6 y 12». Si usas el reloj de la app, no hace falta decir el tiempo.</div>`}</div>
+      <div class="card row"><button data-act="clockEdit">Ajustar reloj</button><button class="danger" data-act="closePeriod">Finalizar ${perLabel(p.quarter)}</button></div>
+      ${UI.clockEdit ? `<div class="card row"><input id="clockVal" inputmode="numeric" placeholder="MM:SS" value="${BS.fmt(Math.round(BS.clockRemaining(p)))}"><button class="pri" data-act="clockSet">Fijar</button></div>` : ''}`;
+  } else if (g.finished) {
+    panel = `<div class="card stack"><h2>Partido finalizado</h2>
+      <div style="font-size:20px;font-weight:700">${h(g.homeTeam)} ${BS.score(g, 'OWN', 0)} - ${BS.score(g, 'OPP', 0)} ${h(g.opponent)}</div>
+      <div class="mute">Parciales: ${partials(g)}</div>
+      <div class="row"><button data-act="exp" data-v="pdf">PDF</button><button data-act="exp" data-v="xlsx">Excel</button><button data-act="summary">WhatsApp</button></div>
+      <button class="pri" data-act="tab" data-v="mas">Crear otro partido</button>
+      <button class="ghost" data-act="reopen">Reabrir partido para corregir</button></div>`;
+  } else if (p.quarter >= 4 && !BS.isTied(g)) {
+    panel = `<div class="card stack"><h2>${perLabel(p.quarter)} finalizado</h2>
+      <div style="font-size:20px;font-weight:700">${h(g.homeTeam)} ${BS.score(g, 'OWN', 0)} - ${BS.score(g, 'OPP', 0)} ${h(g.opponent)}</div>
+      <div class="mute">Parciales: ${partials(g)}. No hay empate, así que no se juega prórroga.</div>
+      <button class="pri" data-act="finishGame">Finalizar partido</button></div>`;
+  } else {
+    const tie = p.quarter >= 4;
+    panel = `<div class="card stack"><h2>${perLabel(p.quarter)} finalizado</h2>
+      ${tie ? `<div class="banner bad">Empate a ${BS.score(g, 'OWN', 0)}: hay que jugar prórroga (5 minutos).</div>` : ''}
+      <div class="mute">Parciales: ${partials(g)}</div>
+      <button class="pri" data-act="nextPeriod">Preparar ${perLabel(p.quarter + 1)}</button>
+      ${tie ? '' : `<button data-act="tab" data-v="mas">Exportar o crear otro partido</button>`}</div>`;
+  }
+  $('#main').innerHTML = `${UI.viewId ? `<div class="banner bad">Estás viendo un partido anterior en Estadística. <a href="#" data-act="viewCurrent">Volver al actual</a></div>` : ''}
+    <div class="card"><div id="micWrap">${micBlock()}</div>
+      <form class="row" data-act="typed"><input id="cmd" placeholder="Escribe una orden (p. ej. triple del 11)" autocomplete="off" enterkeyhint="send"><button class="pri" style="flex:0 0 auto">Enviar</button></form>
+      <div id="lastWrap">${lastBanner()}</div>
+      <div class="row" style="margin-top:8px"><button data-act="undo">↶ Deshacer</button>${CAP.tts ? `<button data-act="speakScore" ${UI.listening ? 'disabled' : ''}>🔈 Leer marcador</button>` : ''}</div>
+    </div>${panel}`;
+}
+function partials(g) { return g.periods.filter((p) => p.state !== 'PREPARED').map((p) => `${BS.score(g, 'OWN', p.quarter)}-${BS.score(g, 'OPP', p.quarter)}`).join(', ') || '—'; }
+
+function renderStats() {
+  const g = viewGame();
+  if (!g) { $('#main').innerHTML = `<div class="card mute">No hay partido.</div>`; return; }
+  const qs = g.periods.filter((p) => p.state !== 'PREPARED').map((p) => p.quarter);
+  const rows = BS.rows(g, UI.statQ);
+  const scroll = ($('.tbl') || {}).scrollLeft || 0;
+  $('#main').innerHTML = `${UI.viewId ? `<div class="banner bad">Partido anterior: ${h(g.title)} (${h(g.date)}). <a href="#" data-act="viewCurrent">Volver al actual</a></div>` : ''}
+    <div class="card"><div class="row"><div><b>${h(g.homeTeam)} ${BS.score(g, 'OWN', 0)} - ${BS.score(g, 'OPP', 0)} ${h(g.opponent)}</b><div class="mute">Parciales: ${partials(g)}</div></div></div>
+    <div class="chips" style="margin-top:8px"><button class="chip ${UI.statQ === 0 ? 'sel' : ''}" data-act="statQ" data-v="0"><b>Total</b></button>${qs.map((q) => `<button class="chip ${UI.statQ === q ? 'sel' : ''}" data-act="statQ" data-v="${q}"><b>${q > 4 ? 'PR' + (q - 4) : q + 'C'}</b></button>`).join('')}</div></div>
+    <div class="tbl"><table><thead><tr>${BS.COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map((r, i) => `<tr class="${i >= rows.length - 2 ? 'tot' : ''}">${r.map((c) => `<td>${h(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="mute">MIN: tiempo según los cambios${BS.current(g).clock.used ? ' y el reloj (en directo)' : ''}. VA: valoración FEB = PT + RT + AS + BR + TF + FR − tiros fallados − BP − tapones recibidos − FC. +/−: según el orden de canastas y cambios dictados (registra los dos equipos). TR = tapones recibidos, MT = mates.</p>`;
+  const t = $('.tbl'); if (t) t.scrollLeft = scroll;
+}
+
+function renderJugadas() {
+  const g = viewGame();
+  if (!g) { $('#main').innerHTML = `<div class="card mute">No hay partido.</div>`; return; }
+  const items = [...g.entries.map((e) => ({ s: e.sequence, e })), ...g.changes.map((c) => ({ s: c.sequence, c }))].sort((a, b) => b.s - a.s);
+  const byQ = {};
+  for (const it of items) { const q = (it.e || it.c).quarter; (byQ[q] = byQ[q] || []).push(it); }
+  const qs = Object.keys(byQ).map(Number).sort((a, b) => b - a);
+  $('#main').innerHTML = (UI.viewId ? `<div class="banner bad">Partido anterior: ${h(g.title)}. <a href="#" data-act="viewCurrent">Volver al actual</a></div>` : '') + (qs.length ? qs.map((q) => `<div class="card"><h2>${perLabel(q)}</h2><ul class="log">${byQ[q].map((it) => {
+    if (it.e) {
+      const e = it.e; const who = e.team === 'OPP' ? `<b style="color:var(--opp)">Rival</b>` : `<b>#${e.player}</b> ${h(BS.playerName(g, e.player))}`;
+      return `<li><span class="t">${e.clock >= 0 ? BS.fmt(e.clock) : ''}</span><span class="d">${who} · ${h(BS.description(e.type))}${e.group ? '<span class="tag">ligada</span>' : ''}</span><button class="danger" data-act="delEntry" data-v="${e.sequence}">Borrar</button></li>`;
+    }
+    const c = it.c;
+    return `<li><span class="t">${BS.fmt(c.remaining)}</span><span class="d">Cambio · salen ${h(c.outs.map((n) => '#' + n).join(', '))} · entran ${h(c.ins.map((n) => '#' + n).join(', '))}</span><button data-act="editChange" data-v="${c.sequence}">Hora</button><button class="danger" data-act="delChange" data-v="${c.sequence}">Borrar</button></li>`;
+  }).join('')}</ul></div>`).join('') : `<div class="card mute">Aún no hay jugadas.</div>`);
+}
+
+function renderPlantilla() {
+  const ed = UI.editPlayer;
+  $('#main').innerHTML = `<div class="card stack"><h2>Equipo</h2><div class="row"><input id="teamName" value="${h(S.teamName)}" placeholder="Nombre del equipo"><button style="flex:0 0 auto" data-act="saveTeam">Guardar</button></div>
+    <div class="mute">Se usa en los partidos nuevos. Puedes decir el nombre de un jugador en lugar del dorsal (p. ej. «triple de Marcos») si no hay dos con el mismo nombre.</div></div>
+    <div class="card stack"><h2>${ed != null ? 'Editar jugador' : 'Añadir jugador'}</h2>
+      <div class="row"><input id="pNum" inputmode="numeric" placeholder="Dorsal" style="flex:0 0 90px" value="${ed != null ? ed : ''}"><input id="pName" placeholder="Nombre y apellidos" value="${ed != null ? h((BS.lookup(S.roster, ed) || {}).name) : ''}"></div>
+      <div class="row">${ed != null ? `<button data-act="cancelEdit">Cancelar</button>` : ''}<button class="pri" data-act="${ed != null ? 'savePlayer' : 'addPlayer'}">${ed != null ? 'Guardar cambios' : 'Añadir'}</button></div></div>
+    <div class="card"><h2>Plantilla (${S.roster.length})</h2><ul class="log">${S.roster.map((p) => `<li><span class="t">#${p.number}</span><span class="d">${h(p.name)}</span><button data-act="editPlayer" data-v="${p.number}">Editar</button><button class="danger" data-act="delPlayer" data-v="${p.number}">Quitar</button></li>`).join('') || '<li class="mute">Sin jugadores.</li>'}</ul></div>`;
+}
+
+function renderMas() {
+  const g = S.game; const se = BS.season(S);
+  $('#main').innerHTML = `
+    ${g ? `<div class="card stack"><h2>Partido actual</h2><div class="mute">${h(g.title)} · ${h(g.date)}${g.competition ? ' · ' + h(g.competition) : ''}</div>
+      <div class="row"><button data-act="exp" data-v="pdf">PDF del partido</button><button data-act="exp" data-v="xlsx">Excel</button></div>
+      <div class="row"><select id="pdfPlayer">${g.roster.map((p) => `<option value="${p.number}">#${p.number} ${h(p.name)}</option>`).join('')}</select><button style="flex:0 0 auto" data-act="exp" data-v="pdfPlayer">PDF jugador</button></div>
+      <div class="row"><button data-act="exp" data-v="csv">CSV</button><button data-act="summary">Resumen para WhatsApp</button></div></div>` : ''}
+    <div class="card stack"><h2>Nuevo partido</h2><div class="mute">El partido actual pasa al historial; la plantilla se conserva.</div>
+      <input id="nOpp" placeholder="Nombre del equipo rival"><input id="nComp" placeholder="Competición (opcional)">
+      <button class="pri" data-act="newGame" ${S.roster.length < 5 ? 'disabled' : ''}>Crear partido nuevo</button>
+      ${g ? `<button class="danger" data-act="delCurrent">Eliminar partido actual</button>` : ''}</div>
+    <div class="card"><h2>Temporada (${S.history.length + (g ? 1 : 0)} partidos)</h2>
+      ${se.length ? `<div class="tbl"><table><thead><tr><th>Jugador</th><th>PJ</th><th>MIN/p</th><th>PT</th><th>PT/p</th><th>RT/p</th><th>AS/p</th><th>T2%</th><th>T3%</th><th>TL%</th><th>VA/p</th><th>+/−</th></tr></thead><tbody>
+      ${se.map((a) => `<tr><td>#${a.number} ${h(a.name)}</td><td>${a.gp}</td><td>${BS.fmt(a.secs / a.gp)}</td><td>${a.pts}</td><td>${(a.pts / a.gp).toFixed(1)}</td><td>${(a.reb / a.gp).toFixed(1)}</td><td>${(a.t.ast / a.gp).toFixed(1)}</td><td>${BS.pct(a.t.m2, a.t.m2 + a.t.x2)}</td><td>${BS.pct(a.t.m3, a.t.m3 + a.t.x3)}</td><td>${BS.pct(a.t.m1, a.t.m1 + a.t.x1)}</td><td>${(a.val / a.gp).toFixed(1)}</td><td>${a.pm > 0 ? '+' : ''}${a.pm}</td></tr>`).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:8px"><button data-act="exp" data-v="seasonPdf">PDF temporada</button><button data-act="exp" data-v="seasonXlsx">Excel temporada</button></div>` : '<div class="mute">Aún no hay datos.</div>'}</div>
+    <div class="card"><h2>Partidos anteriores</h2><ul class="log">${S.history.map((x) => `<li><span class="d"><b>${h(x.homeTeam)} ${BS.score(x, 'OWN', 0)} - ${BS.score(x, 'OPP', 0)} ${h(x.opponent)}</b><br><span class="mute">${h(x.date)}${x.competition ? ' · ' + h(x.competition) : ''}</span></span><button data-act="viewOld" data-v="${x.id}">Ver</button><button data-act="expOld" data-v="${x.id}">PDF</button><button class="danger" data-act="delOld" data-v="${x.id}">Borrar</button></li>`).join('') || '<li class="mute">No hay partidos anteriores.</li>'}</ul></div>
+    <div class="card stack"><h2>Copias de seguridad</h2>
+      <div class="mute" id="sync">${h(syncMsg)}</div>
+      <div class="mute">${STANDALONE ? 'Los datos se guardan solos en este dispositivo. Si borras los datos del navegador o cambias de móvil se pierden: guarda una copia .json después de cada partido.' : 'Los datos se guardan solos en tu cuenta de Claude (privados) y en este navegador. Guarda también una copia .json de vez en cuando.'} Aquí puedes restaurar las copias de la app Android antigua o de otra versión de BasketStats Voz.</div>
+      <div class="row"><button data-act="backup">Guardar copia (.json)</button><label class="row" style="flex:1"><button data-act="pickRestore" style="width:100%">Restaurar copia…</button></label></div>
+      <input type="file" id="restoreFile" accept=".json,application/json" style="display:none"></div>
+    <div class="card"><h2>Ajustes</h2>
+      <label class="sw">Pitido de confirmación <input type="checkbox" data-act="setting" data-v="sounds" ${S.settings.sounds ? 'checked' : ''}></label>
+      <label class="sw">Vibración (si el móvil lo permite) <input type="checkbox" data-act="setting" data-v="vibrate" ${S.settings.vibrate ? 'checked' : ''}></label>
+      ${STANDALONE && CAP.tts ? `<label class="sw">Confirmación hablada de cada orden de voz <input type="checkbox" data-act="setting" data-v="speak" ${S.settings.speak ? 'checked' : ''}></label><div class="mute">Mejor con cascos. Mientras habla, el micrófono hace una pausa.</div>` : ''}</div>`;
+  $('#restoreFile').addEventListener('change', restore);
+}
+
+function renderAyuda() {
+  $('#main').innerHTML = `<div class="card"><h2>BasketStats Voz · versión ${APP_VERSION}</h2><div class="mute">Si ves otra versión en la cabecera, recarga la página.</div>${STANDALONE && installEvt ? `<button class="pri" style="width:100%;margin-top:8px" data-act="install">Instalar en el móvil</button>` : ''}${STANDALONE ? `<div class="mute" style="margin-top:6px">Para instalarla: menú ⋮ de Chrome → «Añadir a pantalla de inicio» (en iPhone: Compartir → «Añadir a pantalla de inicio»).</div>` : ''}</div><div class="card"><h2>Cómo dictar</h2><ul class="help">
+    <li><b>Quinteto:</b> «quinteto 4, 7, 9, 11 y 15» → «iniciar cuarto»</li>
+    <li><b>Tiros:</b> «triple anotado del 11», «tiro de dos fallado del 7», «tiro libre anotado del 15», «mate del 9»</li>
+    <li><b>Con asistencia:</b> «canasta del 11 asiste el 7»</li>
+    <li><b>Rival:</b> «rival triple anotado», «rival rebote ofensivo»</li>
+    <li><b>Rebote:</b> «rebote del 7» (si no dices ofensivo o defensivo, se deduce del último fallo)</li>
+    <li><b>Otras:</b> asistencia, robo, pérdida, tapón, tapón recibido, falta, falta recibida</li>
+    <li><b>Por nombre:</b> «triple de Marcos» (si el nombre es único en la plantilla)</li>
+    <li><b>Varias seguidas:</b> «tiro libre anotado del 15 y luego tiro libre fallado del 15»</li>
+    <li><b>Corregir:</b> «no, era el 12» cambia el dorsal de la última jugada; «deshacer» la borra</li>
+    <li><b>Cambios:</b> «cambio en 6:42 salen 7 y 11 entran 6 y 12» o «entra el 6 por el 7»</li>
+    <li><b>Reloj:</b> «reloj 6:42», «sigue reloj», «para el reloj», «tiempo muerto». Con el reloj en marcha los cambios no necesitan tiempo y los minutos se ven en directo</li>
+    <li><b>Periodos:</b> «final del cuarto», «segundo cuarto juegan 4 6 9 11 15», «mismo quinteto»</li>
+    <li><b>Final:</b> «final del partido» (desde el 4.º cuarto y sin empate; con empate se juega prórroga). «Reabrir partido» para corregir</li></ul>
+    <h3>Consejos</h3><ul class="help"><li>Abre esta página en Chrome para usar el micrófono, y mantén la pantalla encendida: si se apaga, el dictado se detiene.</li>
+    <li>El reconocimiento de voz necesita conexión a internet.</li>
+    <li>Toca el reloj de arriba para pararlo o ponerlo en marcha.</li></ul></div>`;
+}
+
+// ---------- modal ----------
+function ask(title, body, okLabel, danger) {
+  return new Promise((res) => {
+    $('#modal').innerHTML = `<div class="modal"><div class="card stack"><h2>${h(title)}</h2><div>${body}</div><div class="row"><button data-m="no">Cancelar</button><button class="${danger ? 'danger' : 'pri'}" data-m="yes">${h(okLabel)}</button></div></div></div>`;
+    $('#modal').onclick = (e) => { const b = e.target.closest('[data-m]'); if (!b && e.target.classList.contains('modal')) { $('#modal').innerHTML = ''; res(false); } if (!b) return; const v = b.dataset.m === 'yes'; $('#modal').innerHTML = ''; res(v ? ($('#mIn') ? $('#mIn').value : true) : false); };
+  });
+}
+
+// ---------- exportación ----------
+function loadScript(src) { return new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('No se pudo cargar la librería de exportación')); document.head.appendChild(s); }); }
+async function libPdf() { await loadScript(LIBS.jspdf); await loadScript(LIBS.autotable); return window.jspdf.jsPDF; }
+async function libXlsx() { await loadScript(LIBS.xlsx); return window.XLSX; }
+const safe = (s) => String(s).replace(/[^\p{L}\p{N}_ -]+/gu, '').trim().replace(/\s+/g, '_').slice(0, 60) || 'partido';
+const ascii = (s) => String(s).replace(/−/g, '-').replace(/✓/g, 'OK').replace(/✗/g, 'X');
+async function save(filename, data) {
+  if (!CAP.dl) { toast('Las descargas funcionan al abrir la página en Chrome o en la app de Claude actualizada.'); return; }
+  try { await CAP.dl.save({ filename, data }); toast('Archivo guardado.'); }
+  catch (e) { if (e && e.code !== 'declined') toast(`No se pudo guardar: ${e && e.message ? e.message : 'error'}`); }
+}
+function pdfHeader(doc, g, sub) {
+  doc.setFontSize(15); doc.text(ascii(`${g.homeTeam} ${BS.score(g, 'OWN', 0)} - ${BS.score(g, 'OPP', 0)} ${g.opponent}`), 12, 14);
+  doc.setFontSize(9); doc.setTextColor(100); doc.text(ascii(`${g.date}${g.competition ? ' · ' + g.competition : ''} · Parciales: ${partials(g)}${sub ? ' · ' + sub : ''}`), 12, 20); doc.setTextColor(0);
+}
+const pdfStyle = { styles: { fontSize: 7.2, cellPadding: 1.2, halign: 'right' }, headStyles: { fillColor: [232, 89, 12] }, columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' } }, margin: { left: 8, right: 8 } };
+async function pdfGame(g) {
+  const jsPDF = await libPdf(); const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  pdfHeader(doc, g, 'Estadística estilo FEB');
+  const qs = [0, ...g.periods.filter((p) => p.state !== 'PREPARED').map((p) => p.quarter)];
+  let y = 25;
+  for (const q of qs) {
+    const rows = BS.rows(g, q).map((r) => r.map((c) => ascii(c)));
+    doc.setFontSize(10); if (y > 170) { doc.addPage(); y = 14; } doc.text(q ? perLabel(q) : 'Total del partido', 8, y);
+    doc.autoTable({ ...pdfStyle, startY: y + 2, head: [BS.COLS], body: rows, didParseCell: (d) => { if (d.section === 'body' && d.row.index >= rows.length - 2) d.cell.styles.fontStyle = 'bold'; } });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+  doc.setFontSize(7); doc.setTextColor(110); doc.text('VA = PT + RT + AS + BR + TF + FR - tiros fallados - BP - tapones recibidos - FC. +/- segun el orden de canastas y cambios registrados.', 8, Math.min(y, 200));
+  return doc.output('blob');
+}
+async function pdfPlayer(g, n) {
+  const jsPDF = await libPdf(); const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pl = BS.lookup(g.roster, n); pdfHeader(doc, g, `#${n} ${pl ? pl.name : ''}`);
+  const qs = [...g.periods.filter((p) => p.state !== 'PREPARED').map((p) => p.quarter), 0];
+  const body = qs.map((q) => { const r = BS.rows(g, q).find((x) => x[0] === `#${n}`); return [q ? perLabel(q) : 'Total', ...r.slice(2)].map(ascii); });
+  doc.autoTable({ ...pdfStyle, startY: 26, head: [['Periodo', ...BS.COLS.slice(2)]], body, columnStyles: { 0: { halign: 'left' } } });
+  const acts = g.entries.filter((e) => e.team === 'OWN' && e.player === n).sort((a, b) => a.sequence - b.sequence).map((e) => [perLabel(e.quarter), e.clock >= 0 ? BS.fmt(e.clock) : '', ascii(BS.description(e.type))]);
+  if (acts.length) doc.autoTable({ ...pdfStyle, startY: doc.lastAutoTable.finalY + 8, head: [['Periodo', 'Reloj', 'Accion']], body: acts, tableWidth: 120, columnStyles: { 0: { halign: 'left' }, 2: { halign: 'left' } } });
+  return doc.output('blob');
+}
+async function xlsxGame(g) {
+  const X = await libXlsx(); const wb = X.utils.book_new();
+  const num = (r) => r.map((c) => (typeof c === 'string' && /^[+-]?\d+$/.test(c) ? Number(c) : c));
+  const qs = [0, ...g.periods.filter((p) => p.state !== 'PREPARED').map((p) => p.quarter)];
+  for (const q of qs) {
+    const aoa = [[`${g.homeTeam} ${BS.score(g, 'OWN', q)} - ${BS.score(g, 'OPP', q)} ${g.opponent}`], [], BS.COLS, ...BS.rows(g, q).map(num)];
+    const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 7 }, { wch: 26 }, ...BS.COLS.slice(2).map(() => ({ wch: 8 }))];
+    X.utils.book_append_sheet(wb, ws, q ? (q > 4 ? `Prorroga ${q - 4}` : `Cuarto ${q}`) : 'Total');
+  }
+  const log = [['Periodo', 'Reloj', 'Equipo', 'Dorsal', 'Jugador', 'Acción'], ...[...g.entries].sort((a, b) => a.sequence - b.sequence).map((e) => [e.quarter, e.clock >= 0 ? BS.fmt(e.clock) : '', e.team === 'OPP' ? g.opponent : g.homeTeam, e.team === 'OPP' ? '' : e.player, e.team === 'OPP' ? '' : BS.playerName(g, e.player), BS.description(e.type)])];
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(log), 'Jugadas');
+  const ch = [['Periodo', 'Tiempo', 'Salen', 'Entran'], ...g.changes.map((c) => [c.quarter, BS.fmt(c.remaining), c.outs.join(', '), c.ins.join(', ')])];
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(ch), 'Cambios');
+  return new Uint8Array(X.write(wb, { bookType: 'xlsx', type: 'array' }));
+}
+function csvGame(g) {
+  const head = 'Periodo;Dorsal;Jugador;MIN;PT;T2;T2%;T3;T3%;TC;TC%;TL;TL%;RO;RD;RT;AS;BR;BP;TF;Tapones recibidos;MT;FC;FR;VA;Más menos';
+  const qs = [...g.periods.filter((p) => p.state !== 'PREPARED').map((p) => p.quarter), 0];
+  const lines = [head];
+  for (const q of qs) for (const r of BS.rows(g, q)) lines.push([q ? q : 'Total', ...r].map((c) => `${c}`.replace(/;/g, ',')).join(';'));
+  return '﻿' + lines.join('\n');
+}
+const seasonHead = ['Dorsal', 'Jugador', 'PJ', 'MIN total', 'MIN/p', 'PT', 'PT/p', 'RT', 'RT/p', 'AS', 'AS/p', 'BR', 'BP', 'T2', 'T2%', 'T3', 'T3%', 'TL', 'TL%', 'FC', 'VA', 'VA/p', '+/-'];
+const seasonRows = () => BS.season(S).map((a) => [a.number, a.name, a.gp, BS.fmt(a.secs), BS.fmt(a.secs / a.gp), a.pts, +(a.pts / a.gp).toFixed(1), a.reb, +(a.reb / a.gp).toFixed(1), a.t.ast, +(a.t.ast / a.gp).toFixed(1), a.t.stl, a.t.tov, BS.shots(a.t.m2, a.t.x2), BS.pct(a.t.m2, a.t.m2 + a.t.x2), BS.shots(a.t.m3, a.t.x3), BS.pct(a.t.m3, a.t.m3 + a.t.x3), BS.shots(a.t.m1, a.t.x1), BS.pct(a.t.m1, a.t.m1 + a.t.x1), a.t.pf, a.val, +(a.val / a.gp).toFixed(1), a.pm]);
+async function exportKind(kind, g) {
+  try {
+    toast('Preparando archivo…', 1500);
+    const base = g ? safe(`BasketStats_${g.homeTeam}_vs_${g.opponent}_${g.date.replace(/\//g, '-')}`) : safe(`BasketStats_Temporada_${S.teamName}`);
+    if (kind === 'pdf') return save(base + '.pdf', await pdfGame(g));
+    if (kind === 'pdfPlayer') { const n = Number($('#pdfPlayer').value); return save(`${base}_${n}.pdf`, await pdfPlayer(g, n)); }
+    if (kind === 'xlsx') return save(base + '.xlsx', await xlsxGame(g));
+    if (kind === 'csv') return save(base + '.csv', csvGame(g));
+    if (kind === 'seasonXlsx') { const X = await libXlsx(); const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([seasonHead, ...seasonRows()]), 'Temporada'); return save(base + '.xlsx', new Uint8Array(X.write(wb, { bookType: 'xlsx', type: 'array' }))); }
+    if (kind === 'seasonPdf') {
+      const jsPDF = await libPdf(); const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      doc.setFontSize(15); doc.text(ascii(`${S.teamName} · Temporada (${S.history.length + (S.game ? 1 : 0)} partidos)`), 12, 14);
+      doc.autoTable({ ...pdfStyle, startY: 22, head: [seasonHead], body: seasonRows().map((r) => r.map(ascii)) });
+      return save(base + '.pdf', doc.output('blob'));
+    }
+  } catch (e) { toast(`Error al exportar: ${e.message}`); }
+}
+function summaryText(g) {
+  const a = BS.score(g, 'OWN', 0), b = BS.score(g, 'OPP', 0);
+  const rows = g.roster.map((p) => { const t = BS.tally(g, 'OWN', p.number, 0); return { p, pts: BS.points(t), reb: BS.rebounds(t), ast: t.ast, val: BS.valuation(t) }; });
+  const top = (k) => rows.filter((r) => r[k] > 0).sort((x, y) => y[k] - x[k])[0];
+  const tp = top('pts'), tr = top('reb'), ta = top('ast'), tv = top('val');
+  const lines = [`🏀 ${g.homeTeam} ${a} - ${b} ${g.opponent}`, `${g.date}${g.competition ? ' · ' + g.competition : ''}`, `Parciales: ${partials(g)}`, ''];
+  if (tp) lines.push(`Máx. anotador: ${tp.p.name} (${tp.pts} pts)`);
+  if (tr) lines.push(`Máx. reboteador: ${tr.p.name} (${tr.reb} reb)`);
+  if (ta) lines.push(`Máx. asistente: ${ta.p.name} (${ta.ast} ast)`);
+  if (tv) lines.push(`Mejor valoración: ${tv.p.name} (${tv.val})`);
+  const scorers = rows.filter((r) => r.pts > 0).sort((x, y) => y.pts - x.pts).map((r) => `${r.p.name.split(' ')[0]} ${r.pts}`);
+  if (scorers.length) lines.push('', `Anotación: ${scorers.join(', ')}`);
+  return lines.join('\n');
+}
+function backupJson() { const o = { ...S, appVersion: APP_VERSION, recognition: 'AUTO', continuous: false }; return JSON.stringify(o, null, 1); }
+async function restore(ev) {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text()); const ns = BS.importState(obj);
+    const n = ns.history.length + (ns.game ? 1 : 0);
+    if (!(await ask('Restaurar copia', `Se sustituirán los datos actuales por la copia: ${ns.roster.length} jugadores y ${n} partidos. Guarda antes una copia si quieres conservar lo actual.`, 'Restaurar', true))) return;
+    S = ns; UI.viewId = null; persist(); render(); toast('Copia restaurada correctamente.');
+  } catch (e) { toast(`Copia no válida: ${e.message}`); }
+}
+
+// ---------- eventos ----------
+document.addEventListener('submit', (e) => {
+  if (e.target.dataset.act === 'typed') { e.preventDefault(); const i = $('#cmd'); const v = i.value.trim(); if (v) { command(v, 'texto'); const j = $('#cmd'); if (j) { j.value = ''; j.focus(); } } }
+});
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.act === 'setting') { S.settings[t.dataset.v] = t.checked; persist(); }
+});
+document.addEventListener('input', (e) => { if (e.target.id === 'subTime') UI.subTime = e.target.value; });
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.tagName === 'FORM' || b.tagName === 'INPUT') return;
+  const act = b.dataset.act, v = b.dataset.v; const g = S.game;
+  if (b.tagName === 'A') e.preventDefault();
+  switch (act) {
+    case 'tab': UI.tab = v; render(); window.scrollTo(0, 0); break;
+    case 'mic': {
+      audioInit();
+      if (UI.listening) { UI.wantListen = false; CAP.dict.stop().catch(() => {}); break; }
+      UI.micNote = ''; UI.wantListen = true;
+      CAP.dict.start().catch((err) => { UI.wantListen = false; UI.micNote = err && err.code === 'not_granted' ? 'No se ha dado permiso al micrófono. Puedes escribir las órdenes o usar los botones.' : 'No se pudo iniciar el micrófono. Vuelve a tocar.'; renderMic(); });
+      renderMic(); break;
+    }
+    case 'clockToggle': {
+      if (!g) break; audioInit(); const p = BS.current(g);
+      const r = p.clock.running ? BS.clockStop(g) : BS.clockStart(g);
+      feedback(r); if (r.ok) persist(); render(); break;
+    }
+    case 'clockEdit': UI.clockEdit = !UI.clockEdit; render(); break;
+    case 'clockSet': { const t = BS.parseTime($('#clockVal').value.trim()); const r = t < 0 ? { ok: false, message: 'Introduce el tiempo restante en formato MM:SS, por ejemplo 06:42.' } : BS.clockSet(g, t); feedback(r); if (r.ok) { UI.clockEdit = false; persist(); } render(); break; }
+    case 'pick': UI.sel = v === 'OPP' ? 'OPP' : Number(v); UI.assistFor = null; renderPartido(); break;
+    case 'q': audioInit(); quick(v); break;
+    case 'assist': { const r = apply(() => BS.linkAssist(g, UI.assistFor, Number(v))); feedback(r); UI.assistFor = null; if (r.ok) persist(); render(); break; }
+    case 'noAssist': UI.assistFor = null; render(); break;
+    case 'lineupPick': { const n = Number(v); const s = UI.lineupSel; const i = s.indexOf(n); if (i >= 0) s.splice(i, 1); else if (s.length < 5) s.push(n); renderPartido(); break; }
+    case 'prepare': { audioInit(); const r = apply(() => BS.prepare(g, UI.lineupSel)); feedback(r); if (r.ok) { UI.lineupSel = []; persist(); } render(); break; }
+    case 'sameLineup': command('mismo quinteto', 'boton'); break;
+    case 'startPeriod': audioInit(); command('iniciar cuarto', 'boton'); break;
+    case 'nextPeriod': command('siguiente cuarto', 'boton'); break;
+    case 'finishGame': if (await ask('Finalizar partido', `Resultado final: ${h(g.homeTeam)} ${BS.score(g, 'OWN', 0)} - ${BS.score(g, 'OPP', 0)} ${h(g.opponent)}. Podrás reabrirlo si necesitas corregir algo.`, 'Finalizar')) command('final del partido', 'boton'); break;
+    case 'reopen': command('reabrir partido', 'boton'); break;
+    case 'closePeriod': if (await ask('Finalizar periodo', `¿Cerrar el ${perLabel(BS.current(g).quarter)}? Los minutos se calculan con los cambios registrados.`, 'Finalizar')) command('final del cuarto', 'boton'); break;
+    case 'undo': command('deshacer', 'boton'); UI.assistFor = null; break;
+    case 'speakScore': {
+      if (!CAP.tts || !g) break; const p = BS.current(g);
+      CAP.tts.speak(`${g.homeTeam} ${BS.score(g, 'OWN', 0)}, ${g.opponent} ${BS.score(g, 'OPP', 0)}. ${perLabel(p.quarter)}, quedan ${Math.floor(BS.clockRemaining(p) / 60)} minutos ${Math.round(BS.clockRemaining(p) % 60)} segundos.`, { language: 'es' }).catch(() => {}); break;
+    }
+    case 'subToggle': UI.subOpen = !UI.subOpen; UI.subOut = []; UI.subIn = []; UI.subTime = ''; renderPartido(); break;
+    case 'subOut': case 'subIn': { const arr = act === 'subOut' ? UI.subOut : UI.subIn; const n = Number(v); const i = arr.indexOf(n); if (i >= 0) arr.splice(i, 1); else if (arr.length < 5) arr.push(n); renderPartido(); break; }
+    case 'subDo': {
+      audioInit(); const t = BS.parseTime(($('#subTime').value || '').trim());
+      const r = t < 0 ? { ok: false, message: 'Introduce el tiempo restante en formato MM:SS, por ejemplo 06:42.' } : apply(() => BS.substitute(g, t, UI.subOut, UI.subIn));
+      feedback(r); if (r.ok) { UI.subOpen = false; UI.subOut = []; UI.subIn = []; UI.subTime = ''; persist(); } render(); break;
+    }
+    case 'statQ': UI.statQ = Number(v); renderStats(); break;
+    case 'delEntry': { const vg = viewGame(); const en = vg.entries.find((x) => x.sequence === Number(v)); if (en && await ask('Borrar jugada', h(`${en.team === 'OPP' ? 'Rival' : '#' + en.player}: ${BS.description(en.type)}${en.group && en.type !== 'AST' ? ' (también su asistencia)' : ''}`), 'Borrar', true)) { const r = BS.deleteEntry(vg, en); toast(r.message); persist(); render(); } break; }
+    case 'delChange': { const vg = viewGame(); const c = vg.changes.find((x) => x.sequence === Number(v)); if (c && await ask('Borrar cambio', `Cambio a ${BS.fmt(c.remaining)}: salen ${c.outs.join(', ')}, entran ${c.ins.join(', ')}.`, 'Borrar', true)) { const r = BS.deleteChange(vg, c); toast(r.message); if (r.ok) persist(); render(); } break; }
+    case 'editChange': { const vg = viewGame(); const c = vg.changes.find((x) => x.sequence === Number(v)); if (!c) break; const val = await ask('Corregir hora del cambio', `<input id="mIn" inputmode="numeric" value="${BS.fmt(c.remaining)}" placeholder="MM:SS">`, 'Guardar'); if (val) { const t = BS.parseTime(String(val).trim()); const r = t < 0 ? { ok: false, message: 'Formato MM:SS, por ejemplo 06:42.' } : BS.correctChangeTime(vg, c, t); toast(r.message); if (r.ok) persist(); render(); } break; }
+    case 'saveTeam': S.teamName = $('#teamName').value.trim() || 'Mi equipo'; persist(); toast('Nombre del equipo guardado para próximos partidos.'); render(); break;
+    case 'addPlayer': case 'savePlayer': {
+      const num = Number($('#pNum').value.trim()); const name = $('#pName').value;
+      const r = act === 'addPlayer' ? BS.addPlayer(S, $('#pNum').value.trim() === '' ? NaN : num, name) : BS.editPlayer(S, UI.editPlayer, num, name);
+      toast(r.message); if (r.ok) { UI.editPlayer = null; persist(); render(); setTimeout(() => { const i = $('#pNum'); if (i) i.focus(); }, 0); } break;
+    }
+    case 'editPlayer': UI.editPlayer = Number(v); render(); break;
+    case 'cancelEdit': UI.editPlayer = null; render(); break;
+    case 'delPlayer': if (await ask('Quitar jugador', `¿Quitar al #${v} de la plantilla? Los partidos anteriores no cambian.`, 'Quitar', true)) { const r = BS.removePlayer(S, Number(v)); toast(r.message); if (r.ok) persist(); render(); } break;
+    case 'newGame': {
+      if (S.game && !(await ask('Crear partido nuevo', 'El partido actual se guardará en el historial. Revisa antes que lo hayas terminado.', 'Continuar'))) break;
+      const r = BS.startNew(S, ($('#nOpp') || {}).value, ($('#nComp') || {}).value); toast(r.message); if (r.ok) { UI.viewId = null; UI.tab = 'partido'; UI.last = null; persist(); } render(); break;
+    }
+    case 'delCurrent': if (await ask('Eliminar partido actual', 'Se borrarán sus jugadas y cambios. La plantilla y los demás partidos se conservan. No se puede deshacer.', 'Eliminar', true)) { S.game = null; persist(); render(); toast('Partido eliminado.'); } break;
+    case 'viewOld': UI.viewId = v; UI.statQ = 0; UI.tab = 'stats'; render(); break;
+    case 'viewCurrent': UI.viewId = null; render(); break;
+    case 'expOld': { const og = S.history.find((x) => x.id === v); if (og) exportKind('pdf', og); break; }
+    case 'delOld': { const og = S.history.find((x) => x.id === v); if (og && await ask('Borrar partido', h(`${og.title} (${og.date}). No se puede deshacer.`), 'Borrar', true)) { S.history = S.history.filter((x) => x !== og); if (UI.viewId === v) UI.viewId = null; persist(); render(); toast('Partido del historial eliminado.'); } break; }
+    case 'exp': exportKind(v, v.startsWith('season') ? null : g); break;
+    case 'summary': {
+      const txt = summaryText(g);
+      $('#modal').innerHTML = `<div class="modal"><div class="card stack"><h2>Resumen del partido</h2><textarea style="width:100%;min-height:200px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);color:var(--ink);font:inherit" readonly>${h(txt)}</textarea>
+        <div class="row"><button data-m2="copy">Copiar</button>${STANDALONE && navigator.share ? '<button data-m2="share">Compartir…</button>' : ''}<a class="pri" style="display:flex;align-items:center;justify-content:center;border-radius:10px;background:#25d366;color:#fff;text-decoration:none;font-weight:600;min-height:44px" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Abrir WhatsApp</a></div><button data-m2="close">Cerrar</button></div></div>`;
+      $('#modal').onclick = async (ev) => { const x = ev.target.closest('[data-m2]'); if (x && x.dataset.m2 === 'share') { try { await navigator.share({ text: txt }); } catch (err) {} return; } if (x && x.dataset.m2 === 'copy') { try { await navigator.clipboard.writeText(txt); toast('Copiado.'); } catch (err) { toast('No se pudo copiar: selecciona el texto y cópialo.'); } } if ((x && x.dataset.m2 === 'close') || ev.target.classList.contains('modal')) $('#modal').innerHTML = ''; };
+      break;
+    }
+    case 'backup': save(`BasketStats_CopiaSeguridad_${BS.today().replace(/\//g, '-')}.json`, backupJson()); break;
+    case 'pickRestore': $('#restoreFile').click(); break;
+    case 'install': if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (err) {} installEvt = null; render(); } break;
+  }
+});
+
+loadLocal();
+render();
+initCaps();
+</script>
+</body>
+</html>

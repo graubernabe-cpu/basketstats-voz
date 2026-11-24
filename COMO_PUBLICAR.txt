@@ -1,0 +1,51 @@
+BASKETSTATS VOZ v1.2 — VERSIÓN WEB INDEPENDIENTE
+================================================
+
+Esta carpeta es la app completa. Para que funcione el micrófono tiene que
+estar publicada en una web con dirección "https://". La forma gratuita más
+sencilla es GitHub Pages. Solo hay que hacerlo una vez.
+
+QUÉ NECESITAS
+- Una cuenta gratuita en https://github.com
+- Los 10 archivos de esta carpeta (descomprime el .zip antes)
+
+PASOS (desde el móvil o el ordenador)
+1. Entra en github.com con tu cuenta.
+2. Pulsa "+" (arriba) → "New repository".
+   - Nombre: basketstats-voz
+   - Marca "Public".
+   - Pulsa "Create repository".
+3. En la página del repositorio pulsa "uploading an existing file"
+   (o "Add file" → "Upload files").
+4. Selecciona LOS 10 ARCHIVOS a la vez y súbelos.
+   Pulsa "Commit changes".
+5. Ve a "Settings" → "Pages" (menú de la izquierda).
+   - En "Branch" elige "main" y la carpeta "/ (root)". Pulsa "Save".
+6. Espera 1–2 minutos y recarga esa página. Aparecerá la dirección, del tipo:
+       https://TU-USUARIO.github.io/basketstats-voz/
+   Esa es la dirección que puedes enviar a quien quieras.
+
+INSTALARLA EN EL MÓVIL
+- Android (Chrome): abre la dirección → menú ⋮ → "Añadir a pantalla de
+  inicio" o "Instalar aplicación". Queda como una app más.
+- iPhone (Safari): botón Compartir → "Añadir a pantalla de inicio".
+
+QUÉ FUNCIONA EN ESTA VERSIÓN
+- Dictado por voz en Chrome (Android y ordenador), para cualquier persona.
+  En iPhone puede funcionar con Safari; si no, se usan los botones o el
+  micrófono del teclado.
+- Si el micrófono se corta, se reanuda solo.
+- Confirmación hablada opcional (Partidos → Ajustes). Mejor con cascos.
+- PDF, Excel y CSV con botón "Compartir" para enviarlos por WhatsApp.
+- Funciona sin conexión salvo el reconocimiento de voz, que necesita internet.
+
+IMPORTANTE SOBRE LOS DATOS
+- Cada persona guarda sus datos en su propio móvil, no en la nube.
+- Después de cada partido: Partidos → "Guardar copia (.json)".
+- Las copias de la versión de Claude y de la app Android antigua se pueden
+  restaurar aquí (Partidos → "Restaurar copia…").
+
+ACTUALIZAR A UNA VERSIÓN NUEVA
+- Sube los archivos nuevos al mismo repositorio (sustituyen a los antiguos).
+- En el móvil, cierra la app y ábrela dos veces: la versión aparece debajo del
+  reloj.
