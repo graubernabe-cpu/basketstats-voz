@@ -1,4 +1,4 @@
-BASKETSTATS VOZ v1.2 — VERSIÓN WEB INDEPENDIENTE
+BASKETSTATS VOZ — VERSIÓN WEB INDEPENDIENTE
 ================================================
 
 Esta carpeta es la app completa. Para que funcione el micrófono tiene que

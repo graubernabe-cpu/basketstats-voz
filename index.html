@@ -23,6 +23,8 @@ button.danger{color:var(--bad);border-color:var(--bad)}
 button:disabled{opacity:.45;cursor:default}
 input,select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
 header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
+.teambar{display:flex;justify-content:center;margin-bottom:6px}
+.teambar select{width:auto;max-width:80%;min-height:32px;padding:4px 10px;font-size:13px;font-weight:600;border-radius:8px}
 .score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
 .team{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .team.r{text-align:right}
@@ -88,6 +90,7 @@ tr.tot td{font-weight:700}
 </head>
 <body>
 <header>
+  <div class="teambar"><select id="teamSel" aria-label="Equipo"></select></div>
   <div class="score">
     <div><div class="team" id="hHome">Mi equipo</div><div class="pts" id="hA">0</div></div>
     <div class="mid"><button class="clock" id="hClock" data-act="clockToggle">10:00</button><div class="per" id="hPer">—</div><div class="ver" id="hVer">BasketStats Voz</div></div>
@@ -761,7 +764,32 @@ const BS = (() => {
     return s;
   }
 
+  // ---------- varios equipos (estado v3) ----------
+  const DEFAULT_SETTINGS = () => ({ sounds: true, vibrate: true });
+  const newTeam = (name) => ({ id: uid(), teamName: (name || '').trim() || 'Mi equipo', roster: [], game: null, history: [] });
+  function newRoot() { const t = newTeam('Mi equipo'); return { version: 3, teams: [t], activeTeamId: t.id, settings: DEFAULT_SETTINGS(), updatedAt: 0 }; }
+  function teamFrom(obj, keepId) {
+    const s = importState({ teamName: obj.teamName, roster: obj.roster || [], game: obj.game || null, history: obj.history || [] });
+    return { id: (keepId && obj.id) || uid(), teamName: s.teamName, roster: s.roster, game: s.game, history: s.history };
+  }
+  // acepta copias v3 (varios equipos), de la versión 1.0-1.2 y de la app Android
+  function importRoot(obj) {
+    if (!obj || typeof obj !== 'object') throw new Error('archivo vacío o dañado');
+    if (Array.isArray(obj.teams)) {
+      if (!obj.teams.length) throw new Error('la copia no contiene equipos');
+      const teams = obj.teams.map((t) => teamFrom(t, true));
+      return { version: 3, teams, activeTeamId: teams.some((t) => t.id === obj.activeTeamId) ? obj.activeTeamId : teams[0].id, settings: { ...DEFAULT_SETTINGS(), ...(obj.settings || {}) }, updatedAt: obj.updatedAt || 0 };
+    }
+    const t = teamFrom(obj, false);
+    return { version: 3, teams: [t], activeTeamId: t.id, settings: { ...DEFAULT_SETTINGS(), ...(obj.settings || {}) }, updatedAt: obj.updatedAt || 0 };
+  }
+  // copia de un solo equipo en el formato antiguo (compatible con 1.0-1.2 y la app Android)
+  const teamBackup = (t, settings) => ({ teamName: t.teamName, roster: t.roster, game: t.game, history: t.history, settings });
+  // al añadir una copia como equipo nuevo, los partidos reciben identificadores nuevos
+  function renewIds(t) { t.id = uid(); for (const g of [...(t.game ? [t.game] : []), ...t.history]) g.id = uid(); return t; }
+
   return {
+    newTeam, newRoot, teamFrom, importRoot, teamBackup, renewIds,
     normalized, interpret, parseTime, fmt, uid, today, description, newState, newGame, current, lookup, playerName, names,
     clockRemaining, clockStart, clockStop, clockSet, changesOf, lineupAt, prepare, startPeriod, closePeriod, nextPeriod, sameLineup,
     substitute, undo, linkAssist, deleteEntry, deleteChange, correctChangeTime, tally, score, secondsPlayed, plusMinus, minutesLive, rows, COLS,
@@ -773,15 +801,22 @@ if (typeof module !== 'undefined') module.exports = BS;
 </script>
 <script>
 'use strict';
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const STANDALONE = true;
-const LS_KEY = 'basketstats-voz-v2';
+const LS_KEY = 'basketstats-voz-v3';
+const LS_OLD = 'basketstats-voz-v2';
 const LIBS = {
   jspdf: STANDALONE ? 'jspdf.umd.min.js' : 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
   autotable: STANDALONE ? 'jspdf.plugin.autotable.min.js' : 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js',
   xlsx: STANDALONE ? 'xlsx.full.min.js' : 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
 };
-let S = BS.newState();
+let R = BS.newRoot();
+let S = R.teams[0];
+function activate(id) {
+  S = R.teams.find((t) => t.id === (id || R.activeTeamId)) || R.teams[0];
+  R.activeTeamId = S.id;
+  Object.assign(UI, { sel: null, lineupSel: [], subOut: [], subIn: [], subOpen: false, assistFor: null, viewId: null, statQ: 0, last: null, editPlayer: null });
+}
 const UI = { tab: 'partido', sel: null, lineupSel: [], subOut: [], subIn: [], subOpen: false, subTime: '', assistFor: null, viewId: null, statQ: 0, last: null, partial: '', listening: false, wantListen: false, micNote: '', clockEdit: false, pendingFail: null, editPlayer: null };
 const CAP = { dict: null, tts: null, dl: null, db: null, uid: null, ready: false };
 const $ = (s) => document.querySelector(s);
@@ -789,12 +824,15 @@ const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<'
 
 // ---------- persistencia ----------
 function loadLocal() {
-  try { const raw = localStorage.getItem(LS_KEY); if (raw) S = BS.importState(JSON.parse(raw)), S.updatedAt = JSON.parse(raw).updatedAt || 0; } catch (e) { /* sin almacenamiento local */ }
+  try {
+    const raw = localStorage.getItem(LS_KEY) || localStorage.getItem(LS_OLD);
+    if (raw) { R = BS.importRoot(JSON.parse(raw)); activate(R.activeTeamId); }
+  } catch (e) { /* sin almacenamiento local */ }
 }
 let cloudTimer = null, cloudBusy = false, cloudDirty = false; const cloudSent = new Map();
 function persist() {
-  S.updatedAt = Date.now();
-  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) { /* lleno o bloqueado */ }
+  R.updatedAt = Date.now();
+  try { localStorage.setItem(LS_KEY, JSON.stringify(R)); } catch (e) { /* lleno o bloqueado */ }
   cloudDirty = true; clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudSave, 1500);
 }
 const gameDocId = (g) => 'g-' + g.id;
@@ -804,8 +842,9 @@ async function cloudSave() {
   cloudBusy = true; cloudDirty = false;
   try {
     const col = CAP.db.collection('data/users/' + CAP.uid);
-    const games = [...(S.game ? [S.game] : []), ...S.history];
-    const main = { version: 2, teamName: S.teamName, roster: S.roster, settings: S.settings, currentId: S.game ? S.game.id : null, historyIds: S.history.map((g) => g.id), updatedAt: S.updatedAt };
+    const games = R.teams.flatMap((t) => [...(t.game ? [t.game] : []), ...t.history]);
+    const main = { version: 3, settings: R.settings, activeTeamId: R.activeTeamId, updatedAt: R.updatedAt,
+      teams: R.teams.map((t) => ({ id: t.id, teamName: t.teamName, roster: t.roster, currentId: t.game ? t.game.id : null, historyIds: t.history.map((g) => g.id) })) };
     const want = new Map([['main', JSON.stringify(main)], ...games.map((g) => [gameDocId(g), JSON.stringify(g)])]);
     for (const [id, body] of want) {
       if (cloudSent.get(id) === body) continue;
@@ -826,14 +865,27 @@ async function cloudLoad() {
   const main = await col.doc('main').get();
   if (!main.exists) { persist(); return; }
   const m = main.data();
-  if ((m.updatedAt || 0) <= (S.updatedAt || 0)) { cloudSent.set('main', JSON.stringify(m)); persist(); return; }
-  const ids = [...(m.currentId ? [m.currentId] : []), ...(m.historyIds || [])];
-  const snaps = await Promise.all(ids.map((id) => col.doc('g-' + id).get()));
-  const games = snaps.filter((s) => s.exists).map((s) => { cloudSent.set('g-' + s.id.slice(2), s.data().json); return JSON.parse(s.data().json); });
-  const obj = { teamName: m.teamName, roster: m.roster || [], settings: m.settings, game: m.currentId ? games.find((g) => g.id === m.currentId) || null : null, history: games.filter((g) => g.id !== m.currentId) };
-  S = BS.importState(obj); S.updatedAt = m.updatedAt;
+  if ((m.updatedAt || 0) <= (R.updatedAt || 0)) { cloudSent.set('main', JSON.stringify(m)); persist(); return; }
+  const getGames = async (ids) => {
+    const snaps = await Promise.all(ids.map((id) => col.doc('g-' + id).get()));
+    return snaps.filter((x) => x.exists).map((x) => { cloudSent.set(x.id, x.data().json); return JSON.parse(x.data().json); });
+  };
+  let obj;
+  if (m.version === 3 && Array.isArray(m.teams)) {
+    const teams = [];
+    for (const t of m.teams) {
+      const games = await getGames([...(t.currentId ? [t.currentId] : []), ...(t.historyIds || [])]);
+      teams.push({ id: t.id, teamName: t.teamName, roster: t.roster || [], game: t.currentId ? games.find((g) => g.id === t.currentId) || null : null, history: games.filter((g) => g.id !== t.currentId) });
+    }
+    obj = { teams, activeTeamId: m.activeTeamId, settings: m.settings, updatedAt: m.updatedAt };
+  } else {
+    // datos guardados por la versión 1.0-1.2 (un solo equipo)
+    const games = await getGames([...(m.currentId ? [m.currentId] : []), ...(m.historyIds || [])]);
+    obj = { teamName: m.teamName, roster: m.roster || [], settings: m.settings, game: m.currentId ? games.find((g) => g.id === m.currentId) || null : null, history: games.filter((g) => g.id !== m.currentId), updatedAt: m.updatedAt };
+  }
+  R = BS.importRoot(obj); R.updatedAt = m.updatedAt; activate(R.activeTeamId);
   cloudSent.set('main', JSON.stringify(m));
-  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(R)); } catch (e) {}
   render();
 }
 
@@ -973,8 +1025,8 @@ async function initCaps() {
 let actx = null;
 function audioInit() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} }
 function beep(good) {
-  if (S.settings.vibrate) try { navigator.vibrate && navigator.vibrate(good ? 40 : [60, 60, 60]); } catch (e) {}
-  if (!S.settings.sounds || !actx) return;
+  if (R.settings.vibrate) try { navigator.vibrate && navigator.vibrate(good ? 40 : [60, 60, 60]); } catch (e) {}
+  if (!R.settings.sounds || !actx) return;
   try {
     const tones = good ? [[1046, 0, .08]] : [[300, 0, .12], [220, .16, .14]];
     for (const [f, at, d] of tones) {
@@ -1009,7 +1061,7 @@ function command(text, source) {
   }
   UI.pendingFail = !r.ok && source === 'voz' ? { text, at: now } : null;
   feedback(r, used);
-  if (r.ok && STANDALONE && S.settings.speak && source === 'voz' && CAP.tts && CAP.dict && CAP.dict.hold) {
+  if (r.ok && STANDALONE && R.settings.speak && source === 'voz' && CAP.tts && CAP.dict && CAP.dict.hold) {
     const g2 = S.game;
     let say = r.message.replace(/\s*\(#\d+\)/g, '').replace(/\s*\(cuarto \d+\)/g, '').replace(/#(\d+)/g, 'número $1').replace(/\s+\./g, '.');
     if (r.points && g2) say += ` ${BS.score(g2, 'OWN', 0)} a ${BS.score(g2, 'OPP', 0)}.`;
@@ -1055,6 +1107,8 @@ function render() {
 function renderHeader() {
   const g = S.game;
   $('#hVer').textContent = `BasketStats Voz v${APP_VERSION}`;
+  const ts = $('#teamSel');
+  ts.innerHTML = R.teams.map((t) => `<option value="${h(t.id)}" ${t.id === S.id ? 'selected' : ''}>${h(t.teamName)}${t.game && !t.game.finished && t.game.periods.some((p) => p.state === 'ACTIVE') ? ' ●' : ''}</option>`).join('') + '<option value="__new">+ Nuevo equipo…</option>';
   $('#hHome').textContent = g ? g.homeTeam : S.teamName || 'Mi equipo';
   $('#hOpp').textContent = g ? g.opponent : 'Rival';
   $('#hA').textContent = g ? BS.score(g, 'OWN', 0) : 0;
@@ -1199,7 +1253,11 @@ function renderJugadas() {
 
 function renderPlantilla() {
   const ed = UI.editPlayer;
-  $('#main').innerHTML = `<div class="card stack"><h2>Equipo</h2><div class="row"><input id="teamName" value="${h(S.teamName)}" placeholder="Nombre del equipo"><button style="flex:0 0 auto" data-act="saveTeam">Guardar</button></div>
+  $('#main').innerHTML = `<div class="card stack"><h2>Equipos (${R.teams.length})</h2>
+    <ul class="log">${R.teams.map((t) => `<li><span class="d"><b>${h(t.teamName)}</b>${t.id === S.id ? '<span class="tag">activo</span>' : ''}<br><span class="mute">${t.roster.length} jugadores · ${t.history.length + (t.game ? 1 : 0)} partidos</span></span>${t.id === S.id ? '' : `<button data-act="useTeam" data-v="${h(t.id)}">Usar</button>`}${R.teams.length > 1 ? `<button class="danger" data-act="delTeam" data-v="${h(t.id)}">Borrar</button>` : ''}</li>`).join('')}</ul>
+    <div class="row"><input id="newTeam" placeholder="Nombre del nuevo equipo (p. ej. Cadete A)"><button style="flex:0 0 auto" data-act="addTeam">Crear</button></div>
+    <div class="mute">Cada equipo tiene su plantilla, sus partidos y su temporada por separado. Cambia de equipo con el selector de arriba.</div></div>
+    <div class="card stack"><h2>Equipo activo</h2><div class="row"><input id="teamName" value="${h(S.teamName)}" placeholder="Nombre del equipo"><button style="flex:0 0 auto" data-act="saveTeam">Renombrar</button></div>
     <div class="mute">Se usa en los partidos nuevos. Puedes decir el nombre de un jugador en lugar del dorsal (p. ej. «triple de Marcos») si no hay dos con el mismo nombre.</div></div>
     <div class="card stack"><h2>${ed != null ? 'Editar jugador' : 'Añadir jugador'}</h2>
       <div class="row"><input id="pNum" inputmode="numeric" placeholder="Dorsal" style="flex:0 0 90px" value="${ed != null ? ed : ''}"><input id="pName" placeholder="Nombre y apellidos" value="${ed != null ? h((BS.lookup(S.roster, ed) || {}).name) : ''}"></div>
@@ -1226,12 +1284,13 @@ function renderMas() {
     <div class="card stack"><h2>Copias de seguridad</h2>
       <div class="mute" id="sync">${h(syncMsg)}</div>
       <div class="mute">${STANDALONE ? 'Los datos se guardan solos en este dispositivo. Si borras los datos del navegador o cambias de móvil se pierden: guarda una copia .json después de cada partido.' : 'Los datos se guardan solos en tu cuenta de Claude (privados) y en este navegador. Guarda también una copia .json de vez en cuando.'} Aquí puedes restaurar las copias de la app Android antigua o de otra versión de BasketStats Voz.</div>
-      <div class="row"><button data-act="backup">Guardar copia (.json)</button><label class="row" style="flex:1"><button data-act="pickRestore" style="width:100%">Restaurar copia…</button></label></div>
+      <div class="row"><button data-act="backup">Copia de todo (.json)</button><button data-act="backupTeam">Copia de este equipo</button></div>
+      <div class="row"><button data-act="pickRestore" style="width:100%">Restaurar copia…</button></div>
       <input type="file" id="restoreFile" accept=".json,application/json" style="display:none"></div>
     <div class="card"><h2>Ajustes</h2>
-      <label class="sw">Pitido de confirmación <input type="checkbox" data-act="setting" data-v="sounds" ${S.settings.sounds ? 'checked' : ''}></label>
-      <label class="sw">Vibración (si el móvil lo permite) <input type="checkbox" data-act="setting" data-v="vibrate" ${S.settings.vibrate ? 'checked' : ''}></label>
-      ${STANDALONE && CAP.tts ? `<label class="sw">Confirmación hablada de cada orden de voz <input type="checkbox" data-act="setting" data-v="speak" ${S.settings.speak ? 'checked' : ''}></label><div class="mute">Mejor con cascos. Mientras habla, el micrófono hace una pausa.</div>` : ''}</div>`;
+      <label class="sw">Pitido de confirmación <input type="checkbox" data-act="setting" data-v="sounds" ${R.settings.sounds ? 'checked' : ''}></label>
+      <label class="sw">Vibración (si el móvil lo permite) <input type="checkbox" data-act="setting" data-v="vibrate" ${R.settings.vibrate ? 'checked' : ''}></label>
+      ${STANDALONE && CAP.tts ? `<label class="sw">Confirmación hablada de cada orden de voz <input type="checkbox" data-act="setting" data-v="speak" ${R.settings.speak ? 'checked' : ''}></label><div class="mute">Mejor con cascos. Mientras habla, el micrófono hace una pausa.</div>` : ''}</div>`;
   $('#restoreFile').addEventListener('change', restore);
 }
 
@@ -1248,6 +1307,7 @@ function renderAyuda() {
     <li><b>Corregir:</b> «no, era el 12» cambia el dorsal de la última jugada; «deshacer» la borra</li>
     <li><b>Cambios:</b> «cambio en 6:42 salen 7 y 11 entran 6 y 12» o «entra el 6 por el 7»</li>
     <li><b>Reloj:</b> «reloj 6:42», «sigue reloj», «para el reloj», «tiempo muerto». Con el reloj en marcha los cambios no necesitan tiempo y los minutos se ven en directo</li>
+    <li><b>Varios equipos:</b> crea equipos en Plantilla y cambia con el selector de arriba. Las órdenes de voz se aplican al equipo seleccionado</li>
     <li><b>Periodos:</b> «final del cuarto», «segundo cuarto juegan 4 6 9 11 15», «mismo quinteto»</li>
     <li><b>Final:</b> «final del partido» (desde el 4.º cuarto y sin empate; con empate se juega prórroga). «Reabrir partido» para corregir</li></ul>
     <h3>Consejos</h3><ul class="help"><li>Abre esta página en Chrome para usar el micrófono, y mantén la pantalla encendida: si se apaga, el dictado se detiene.</li>
@@ -1358,15 +1418,34 @@ function summaryText(g) {
   if (scorers.length) lines.push('', `Anotación: ${scorers.join(', ')}`);
   return lines.join('\n');
 }
-function backupJson() { const o = { ...S, appVersion: APP_VERSION, recognition: 'AUTO', continuous: false }; return JSON.stringify(o, null, 1); }
+function backupJson() { return JSON.stringify({ ...R, appVersion: APP_VERSION }, null, 1); }
+function teamBackupJson() { return JSON.stringify({ ...BS.teamBackup(S, R.settings), appVersion: APP_VERSION, recognition: 'AUTO', continuous: false }, null, 1); }
 async function restore(ev) {
   const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
   if (!f) return;
+  let obj;
+  try { obj = JSON.parse(await f.text()); } catch (e) { toast('Copia no válida: el archivo no es un JSON correcto.'); return; }
   try {
-    const obj = JSON.parse(await f.text()); const ns = BS.importState(obj);
-    const n = ns.history.length + (ns.game ? 1 : 0);
-    if (!(await ask('Restaurar copia', `Se sustituirán los datos actuales por la copia: ${ns.roster.length} jugadores y ${n} partidos. Guarda antes una copia si quieres conservar lo actual.`, 'Restaurar', true))) return;
-    S = ns; UI.viewId = null; persist(); render(); toast('Copia restaurada correctamente.');
+    if (Array.isArray(obj.teams)) {
+      const nr = BS.importRoot(obj);
+      const n = nr.teams.reduce((a, t) => a + t.history.length + (t.game ? 1 : 0), 0);
+      if (!(await ask('Restaurar copia completa', h(`La copia tiene ${nr.teams.length} equipos (${nr.teams.map((t) => t.teamName).join(', ')}) y ${n} partidos. Sustituirá TODOS los datos actuales.`), 'Sustituir todo', true))) return;
+      R = nr; activate(R.activeTeamId);
+    } else {
+      const t = BS.teamFrom(obj, false);
+      const n = t.history.length + (t.game ? 1 : 0);
+      const c = await choose('Restaurar copia de un equipo', h(`«${t.teamName}»: ${t.roster.length} jugadores y ${n} partidos.`), [['add', 'Añadir como equipo nuevo', 'pri'], ['replace', `Sustituir el equipo «${S.teamName}»`, 'danger']]);
+      if (!c) return;
+      if (c === 'add') {
+        BS.renewIds(t);
+        const taken = (n) => R.teams.some((x) => x.teamName.toLowerCase() === n.toLowerCase());
+        if (taken(t.teamName)) { let n = `${t.teamName} (copia)`, k = 2; while (taken(n)) n = `${t.teamName} (copia ${k++})`; t.teamName = n; }
+        R.teams.push(t); activate(t.id);
+      }
+      else { const keep = S.id; Object.assign(S, t, { id: keep }); activate(keep); }
+      if (obj.settings) R.settings = { ...R.settings, ...obj.settings };
+    }
+    persist(); render(); toast('Copia restaurada correctamente.');
   } catch (e) { toast(`Copia no válida: ${e.message}`); }
 }
 
@@ -1376,7 +1455,11 @@ document.addEventListener('submit', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
-  if (t.dataset.act === 'setting') { S.settings[t.dataset.v] = t.checked; persist(); }
+  if (t.id === 'teamSel') {
+    if (t.value === '__new') { UI.tab = 'plantilla'; render(); setTimeout(() => { const i = $('#newTeam'); if (i) i.focus(); }, 0); return; }
+    activate(t.value); persist(); render(); toast(`Equipo: ${S.teamName}`); return;
+  }
+  if (t.dataset.act === 'setting') { R.settings[t.dataset.v] = t.checked; persist(); }
 });
 document.addEventListener('input', (e) => { if (e.target.id === 'subTime') UI.subTime = e.target.value; });
 document.addEventListener('click', async (e) => {
@@ -1428,7 +1511,20 @@ document.addEventListener('click', async (e) => {
     case 'delEntry': { const vg = viewGame(); const en = vg.entries.find((x) => x.sequence === Number(v)); if (en && await ask('Borrar jugada', h(`${en.team === 'OPP' ? 'Rival' : '#' + en.player}: ${BS.description(en.type)}${en.group && en.type !== 'AST' ? ' (también su asistencia)' : ''}`), 'Borrar', true)) { const r = BS.deleteEntry(vg, en); toast(r.message); persist(); render(); } break; }
     case 'delChange': { const vg = viewGame(); const c = vg.changes.find((x) => x.sequence === Number(v)); if (c && await ask('Borrar cambio', `Cambio a ${BS.fmt(c.remaining)}: salen ${c.outs.join(', ')}, entran ${c.ins.join(', ')}.`, 'Borrar', true)) { const r = BS.deleteChange(vg, c); toast(r.message); if (r.ok) persist(); render(); } break; }
     case 'editChange': { const vg = viewGame(); const c = vg.changes.find((x) => x.sequence === Number(v)); if (!c) break; const val = await ask('Corregir hora del cambio', `<input id="mIn" inputmode="numeric" value="${BS.fmt(c.remaining)}" placeholder="MM:SS">`, 'Guardar'); if (val) { const t = BS.parseTime(String(val).trim()); const r = t < 0 ? { ok: false, message: 'Formato MM:SS, por ejemplo 06:42.' } : BS.correctChangeTime(vg, c, t); toast(r.message); if (r.ok) persist(); render(); } break; }
-    case 'saveTeam': S.teamName = $('#teamName').value.trim() || 'Mi equipo'; persist(); toast('Nombre del equipo guardado para próximos partidos.'); render(); break;
+    case 'useTeam': activate(v); persist(); render(); toast(`Equipo: ${S.teamName}`); break;
+    case 'addTeam': {
+      const name = ($('#newTeam').value || '').trim();
+      if (!name) { toast('Escribe el nombre del nuevo equipo.'); break; }
+      if (R.teams.some((t) => t.teamName.toLowerCase() === name.toLowerCase())) { toast('Ya hay un equipo con ese nombre.'); break; }
+      const t = BS.newTeam(name); R.teams.push(t); activate(t.id); persist(); render(); toast(`Equipo «${name}» creado. Añade su plantilla.`); break;
+    }
+    case 'delTeam': {
+      const t = R.teams.find((x) => x.id === v); if (!t || R.teams.length < 2) break;
+      const n = t.history.length + (t.game ? 1 : 0);
+      if (!(await ask('Borrar equipo', h(`Se borrará «${t.teamName}» con sus ${t.roster.length} jugadores y ${n} partidos. No se puede deshacer: guarda antes una copia si la necesitas.`), 'Borrar equipo', true))) break;
+      R.teams = R.teams.filter((x) => x !== t); if (S === t) activate(R.teams[0].id); persist(); render(); toast('Equipo borrado.'); break;
+    }
+    case 'saveTeam': S.teamName = $('#teamName').value.trim() || 'Mi equipo'; persist(); toast('Nombre guardado. Se usa en los partidos nuevos.'); render(); break;
     case 'addPlayer': case 'savePlayer': {
       const num = Number($('#pNum').value.trim()); const name = $('#pName').value;
       const r = act === 'addPlayer' ? BS.addPlayer(S, $('#pNum').value.trim() === '' ? NaN : num, name) : BS.editPlayer(S, UI.editPlayer, num, name);
@@ -1455,6 +1551,7 @@ document.addEventListener('click', async (e) => {
       break;
     }
     case 'backup': save(`BasketStats_CopiaSeguridad_${BS.today().replace(/\//g, '-')}.json`, backupJson()); break;
+    case 'backupTeam': save(safe(`BasketStats_Copia_${S.teamName}_${BS.today().replace(/\//g, '-')}`) + '.json', teamBackupJson()); break;
     case 'pickRestore': $('#restoreFile').click(); break;
     case 'install': if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (err) {} installEvt = null; render(); } break;
   }

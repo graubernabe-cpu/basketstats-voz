@@ -1,5 +1,5 @@
-// BasketStats Voz 1.2: funciona sin conexión (salvo el reconocimiento de voz, que necesita internet)
-const CACHE = 'bsv-1.2';
+// BasketStats Voz 1.3: funciona sin conexión (salvo el reconocimiento de voz, que necesita internet)
+const CACHE = 'bsv-1.3';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'jspdf.umd.min.js', 'jspdf.plugin.autotable.min.js', 'xlsx.full.min.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
